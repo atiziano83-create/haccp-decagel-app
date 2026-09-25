@@ -1,0 +1,232 @@
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #f4f6f8;
+    color: #2c3e50;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+.schermo {
+    display: none;
+    min-height: 100dvh;
+    flex-direction: column;
+    padding: 20px;
+}
+.schermo.attiva { display: flex; }
+
+header.top {
+    text-align: center;
+    margin-bottom: 20px;
+}
+header.top h1 {
+    font-size: 20px;
+    margin: 0 0 4px 0;
+}
+header.top .sottotitolo {
+    font-size: 14px;
+    color: #7f8c8d;
+}
+
+.badge-stato {
+    position: fixed;
+    top: 8px;
+    right: 8px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 50;
+}
+.badge-stato.online { background: #d4efdf; color: #196f3d; }
+.badge-stato.offline { background: #fdebd0; color: #9c640c; }
+.badge-stato.sync { background: #d6eaf8; color: #1b4f72; }
+
+/* --- Setup iniziale (nome + camion) --- */
+.campo {
+    margin-bottom: 18px;
+}
+.campo label {
+    display: block;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 6px;
+    color: #34495e;
+}
+.campo input, .campo select {
+    width: 100%;
+    padding: 14px;
+    font-size: 18px;
+    border: 2px solid #d5dbdb;
+    border-radius: 10px;
+    background: white;
+}
+.campo input:focus, .campo select:focus {
+    border-color: #2c3e50;
+    outline: none;
+}
+
+.bottone-grande {
+    width: 100%;
+    padding: 18px;
+    font-size: 18px;
+    font-weight: bold;
+    border: none;
+    border-radius: 12px;
+    background: #2c3e50;
+    color: white;
+    margin-top: 8px;
+}
+.bottone-grande:active { background: #1a252f; }
+.bottone-grande:disabled { background: #bdc3c7; }
+
+.bottone-secondario {
+    background: transparent;
+    color: #7f8c8d;
+    text-decoration: underline;
+    border: none;
+    font-size: 14px;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+/* --- Schermo principale --- */
+.card-identita {
+    background: white;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.card-identita .info strong { display: block; font-size: 16px; }
+.card-identita .info span { font-size: 13px; color: #7f8c8d; }
+.card-identita button {
+    background: none;
+    border: none;
+    color: #2980b9;
+    font-size: 14px;
+}
+
+.azioni {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1;
+}
+
+.riquadro-azione {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    border: 3px solid transparent;
+}
+.riquadro-azione.fatto { border-color: #27ae60; }
+
+.riquadro-azione .titolo-riga {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.riquadro-azione .titolo-riga .titolo {
+    font-size: 19px;
+    font-weight: bold;
+}
+.riquadro-azione .esito {
+    font-size: 15px;
+    color: #27ae60;
+    font-weight: bold;
+}
+.riquadro-azione .esito.vuoto { color: #95a5a6; font-weight: normal; }
+
+.riquadro-azione button.grande {
+    width: 100%;
+    padding: 22px;
+    font-size: 20px;
+    font-weight: bold;
+    border: none;
+    border-radius: 12px;
+    color: white;
+}
+.riquadro-azione.partenza button.grande { background: #e67e22; }
+.riquadro-azione.fine button.grande { background: #8e44ad; }
+.riquadro-azione button.grande:active { filter: brightness(0.9); }
+
+/* --- Modale inserimento temperatura --- */
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    align-items: flex-end;
+    z-index: 100;
+}
+.overlay.attiva { display: flex; }
+
+.foglio-temp {
+    background: white;
+    width: 100%;
+    border-radius: 20px 20px 0 0;
+    padding: 24px 20px 32px 20px;
+    text-align: center;
+}
+.foglio-temp h2 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+}
+.foglio-temp .ora-corrente {
+    font-size: 14px;
+    color: #7f8c8d;
+    margin-bottom: 20px;
+}
+
+.selettore-temp {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 28px;
+}
+.selettore-temp button {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    background: #ecf0f1;
+    font-size: 28px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+.selettore-temp button:active { background: #dfe4e6; }
+.selettore-temp .valore {
+    font-size: 44px;
+    font-weight: bold;
+    min-width: 130px;
+}
+.selettore-temp .unita { font-size: 22px; color: #7f8c8d; }
+
+.foglio-temp .conferma {
+    width: 100%;
+    padding: 18px;
+    font-size: 19px;
+    font-weight: bold;
+    border: none;
+    border-radius: 12px;
+    background: #27ae60;
+    color: white;
+}
+.foglio-temp .annulla {
+    width: 100%;
+    padding: 14px;
+    font-size: 15px;
+    border: none;
+    background: none;
+    color: #7f8c8d;
+    margin-top: 10px;
+}

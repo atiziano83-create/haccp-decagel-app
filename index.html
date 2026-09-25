@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>HACCP DE.CA.GEL.</title>
+<meta name="theme-color" content="#2c3e50">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="badge-stato" class="badge-stato offline">Offline</div>
+
+<!-- SCHERMO 1: primo avvio, chiede nome e camion -->
+<div id="schermo-setup" class="schermo">
+    <header class="top">
+        <h1>🌡️ HACCP DE.CA.GEL.</h1>
+        <div class="sottotitolo">Prima di iniziare</div>
+    </header>
+
+    <div class="campo">
+        <label for="input-nome">Il tuo nome</label>
+        <input type="text" id="input-nome" placeholder="Es. Mario Rossi" autocomplete="name">
+    </div>
+
+    <div class="campo">
+        <label for="input-camion">Camion che guidi oggi</label>
+        <select id="input-camion"></select>
+    </div>
+
+    <button class="bottone-grande" id="btn-conferma-setup">Continua</button>
+</div>
+
+<!-- SCHERMO 2: schermata principale con i due tasti -->
+<div id="schermo-principale" class="schermo">
+    <header class="top">
+        <h1 id="titolo-data">—</h1>
+    </header>
+
+    <div class="card-identita">
+        <div class="info">
+            <strong id="testo-autista">—</strong>
+            <span id="testo-camion">—</span>
+        </div>
+        <button id="btn-cambia-identita">Cambia</button>
+    </div>
+
+    <div class="azioni">
+        <div class="riquadro-azione partenza" id="riquadro-partenza">
+            <div class="titolo-riga">
+                <span class="titolo">🌅 Partenza</span>
+            </div>
+            <div class="esito vuoto" id="esito-partenza">Non ancora registrata</div>
+            <button class="grande" id="btn-partenza">Registra temperatura</button>
+        </div>
+
+        <div class="riquadro-azione fine" id="riquadro-fine">
+            <div class="titolo-riga">
+                <span class="titolo">🌇 Fine giro</span>
+            </div>
+            <div class="esito vuoto" id="esito-fine">Non ancora registrata</div>
+            <button class="grande" id="btn-fine">Registra temperatura</button>
+        </div>
+    </div>
+</div>
+
+<!-- Foglio modale per inserire la temperatura -->
+<div class="overlay" id="overlay-temp">
+    <div class="foglio-temp">
+        <h2 id="titolo-modale">Temperatura</h2>
+        <div class="ora-corrente" id="ora-modale">—</div>
+
+        <div class="selettore-temp">
+            <button id="btn-meno">−</button>
+            <div class="valore"><span id="valore-temp">-18</span><span class="unita">°C</span></div>
+            <button id="btn-piu">+</button>
+        </div>
+
+        <button class="conferma" id="btn-conferma-temp">✅ Conferma e salva</button>
+        <button class="annulla" id="btn-annulla-temp">Annulla</button>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
