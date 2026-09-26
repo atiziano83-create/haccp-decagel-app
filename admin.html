@@ -36,6 +36,7 @@
     <div class="nav-sezioni">
         <button id="btn-celle" class="bottone-nav">🧊 Temp Celle</button>
         <button id="btn-ricevimento" class="bottone-nav">📦 Ricevimento Merce</button>
+        <button id="btn-pulizie" class="bottone-nav">🧹 Pulizie</button>
     </div>
 
     <section class="blocco">
@@ -127,6 +128,54 @@
     </section>
 </div>
 
+<!-- SCHERMO REGISTRO PULIZIE -->
+<div id="schermo-pulizie" class="schermo">
+    <header class="top">
+        <h1>🧹 Registro Pulizie</h1>
+        <div class="sottotitolo" id="sottotitolo-data-pulizie">—</div>
+    </header>
+    <button class="bottone-secondario" id="btn-torna-dashboard-pulizie">← Torna alla Dashboard</button>
+
+    <div class="blocco">
+        <h2>Nuova pulizia</h2>
+
+        <div class="campo">
+            <label for="input-area-pulizia">Area / camion / cella</label>
+            <select id="input-area-pulizia"></select>
+        </div>
+
+        <div class="campo">
+            <label for="input-frequenza">Frequenza</label>
+            <select id="input-frequenza"></select>
+        </div>
+
+        <div class="campo">
+            <label>Esito</label>
+            <div class="toggle-conformita">
+                <button type="button" class="btn-conformita conforme" id="btn-completato">✅ Completato</button>
+                <button type="button" class="btn-conformita non-conforme" id="btn-non-completato">⚠️ Non completato</button>
+            </div>
+        </div>
+
+        <div class="campo">
+            <label for="input-note-pulizia">Note</label>
+            <textarea id="input-note-pulizia" rows="3" placeholder="Facoltative"></textarea>
+        </div>
+
+        <div class="campo">
+            <label for="input-operatore-pulizia">Operatore</label>
+            <input type="text" id="input-operatore-pulizia" placeholder="Il tuo nome" autocomplete="name">
+        </div>
+
+        <button class="bottone-grande" id="btn-salva-pulizia">Registra pulizia</button>
+    </div>
+
+    <section class="blocco">
+        <h2>Pulizie di oggi</h2>
+        <div id="lista-pulizie" class="lista-camion">Caricamento…</div>
+    </section>
+</div>
+
 <!-- Foglio modale per inserire la temperatura di una cella -->
 <div class="overlay" id="overlay-temp-cella">
     <div class="foglio-temp">
@@ -155,6 +204,7 @@
 <script src="dati-camion.js"></script>
 <script src="dati-celle.js"></script>
 <script src="dati-fornitori.js"></script>
+<script src="dati-pulizie.js"></script>
 <script src="admin.js"></script>
 </body>
 </html>

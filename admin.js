@@ -462,6 +462,158 @@ async function caricaRicevimentiOggi() {
 }
 
 // ============================================================
+// REGISTRO PULIZIE
+// ============================================================
+let esitoPuliziaScelto = null; // "Completato" oppure "Non completato"
+
+document.getElementById("btn-pulizie").addEventListener("click", async () => {
+    mostraSchermo("schermo-pulizie");
+    document.getElementById("sottotitolo-data-pulizie").textContent = dataLeggibile(new Date());
+    popolaSelectAreaPulizia();
+    popolaSelectFrequenza();
+    precompilaOperatorePulizia();
+    await accessoAnonimoPronto;
+    caricaPulizieOggi();
+});
+document.getElementById("btn-torna-dashboard-pulizie").addEventListener("click", () => mostraSchermo("schermo-dashboard"));
+
+function popolaSelectAreaPulizia() {
+    const select = document.getElementById("input-area-pulizia");
+    if (select.dataset.popolato === "1") return;
+    select.innerHTML = "";
+
+    const gruppoGenerico = document.createElement("optgroup");
+    gruppoGenerico.label = "Aree generiche";
+    AREE_PULIZIA_GENERICHE.forEach((nome) => {
+        const opzione = document.createElement("option");
+        opzione.value = nome;
+        opzione.textContent = nome;
+        gruppoGenerico.appendChild(opzione);
+    });
+    select.appendChild(gruppoGenerico);
+
+    const gruppoCelle = document.createElement("optgroup");
+    gruppoCelle.label = "Celle frigo";
+    CELLE.forEach((cella) => {
+        const opzione = document.createElement("option");
+        opzione.value = `${cella.nome} (${cella.id})`;
+        opzione.textContent = `${cella.nome} (${cella.id})`;
+        gruppoCelle.appendChild(opzione);
+    });
+    select.appendChild(gruppoCelle);
+
+    const gruppoCamion = document.createElement("optgroup");
+    gruppoCamion.label = "Camion";
+    CAMION.forEach((camion) => {
+        const opzione = document.createElement("option");
+        opzione.value = `${camion.targa} - ${camion.modello}`;
+        opzione.textContent = `${camion.targa} - ${camion.modello}`;
+        gruppoCamion.appendChild(opzione);
+    });
+    select.appendChild(gruppoCamion);
+
+    select.dataset.popolato = "1";
+}
+
+function popolaSelectFrequenza() {
+    const select = document.getElementById("input-frequenza");
+    if (select.dataset.popolato === "1") return;
+    select.innerHTML = "";
+    FREQUENZE_PULIZIA.forEach((freq) => {
+        const opzione = document.createElement("option");
+        opzione.value = freq;
+        opzione.textContent = freq;
+        select.appendChild(opzione);
+    });
+    select.dataset.popolato = "1";
+}
+
+function precompilaOperatorePulizia() {
+    const campo = document.getElementById("input-operatore-pulizia");
+    if (!campo.value) {
+        campo.value = localStorage.getItem("haccp_operatore_pulizia") || "";
+    }
+}
+
+function impostaEsitoPulizia(valore) {
+    esitoPuliziaScelto = valore;
+    document.getElementById("btn-completato").classList.toggle("selezionato", valore === "Completato");
+    document.getElementById("btn-non-completato").classList.toggle("selezionato", valore === "Non completato");
+}
+document.getElementById("btn-completato").addEventListener("click", () => impostaEsitoPulizia("Completato"));
+document.getElementById("btn-non-completato").addEventListener("click", () => impostaEsitoPulizia("Non completato"));
+
+document.getElementById("btn-salva-pulizia").addEventListener("click", async () => {
+    const area = document.getElementById("input-area-pulizia").value;
+    const frequenza = document.getElementById("input-frequenza").value;
+    const note = document.getElementById("input-note-pulizia").value.trim();
+    const operatore = document.getElementById("input-operatore-pulizia").value.trim();
+
+    if (!esitoPuliziaScelto) { alert("Seleziona l'esito (Completato / Non completato)."); return; }
+    if (!operatore) { alert("Scrivi il nome dell'operatore."); return; }
+
+    const dati = {
+        data: dataISO(new Date()),
+        ora: oraCorrenteHHMM(),
+        area,
+        frequenza,
+        esito: esitoPuliziaScelto,
+        note,
+        operatore,
+        creato_il: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+
+    localStorage.setItem("haccp_operatore_pulizia", operatore);
+
+    // .add() funziona anche offline: la scrittura resta in coda in
+    // locale e parte da sola non appena torna la connessione.
+    db.collection("registro_pulizie").add(dati);
+
+    document.getElementById("input-note-pulizia").value = "";
+    impostaEsitoPulizia(null);
+
+    caricaPulizieOggi();
+});
+
+async function caricaPulizieOggi() {
+    const contenitore = document.getElementById("lista-pulizie");
+    contenitore.innerHTML = "Caricamento…";
+    const oggiISO = dataISO(new Date());
+
+    let documenti = [];
+    try {
+        const snap = await db.collection("registro_pulizie").where("data", "==", oggiISO).get();
+        documenti = snap.docs.map((doc) => doc.data());
+    } catch (errore) {
+        console.error("Errore lettura pulizie di oggi:", errore);
+    }
+
+    if (documenti.length === 0) {
+        contenitore.innerHTML = '<div class="messaggio-ok">Nessuna pulizia registrata oggi.</div>';
+        return;
+    }
+
+    documenti.sort((a, b) => (a.ora || "").localeCompare(b.ora || ""));
+
+    contenitore.innerHTML = documenti.map((p) => {
+        const badge = p.esito === "Completato"
+            ? '<span class="pallino ok">✅ Completato</span>'
+            : '<span class="pallino mancante">⚠️ Non completato</span>';
+        const nota = p.note ? `<div class="note-ricevimento">📝 ${p.note}</div>` : "";
+        return `
+            <div class="riga-ricevimento">
+                <div class="riga-top">
+                    <strong>${p.area}</strong>
+                    ${badge}
+                </div>
+                <div class="dettagli">${p.ora || "—"} · ${p.frequenza || "—"} · ${p.operatore || "—"}</div>
+                ${nota}
+            </div>
+        `;
+    }).join("");
+}
+
+// ============================================================
 // AVVIO: se la sessione ha già superato il login in questa scheda,
 // entra direttamente (evita di richiedere la password ad ogni click
 // se l'admin naviga avanti e indietro nella stessa sessione browser).
