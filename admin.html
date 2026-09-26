@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>HACCP - Dashboard Admin</title>
+<meta name="theme-color" content="#2c3e50">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<!-- SCHERMO LOGIN -->
+<div id="schermo-login" class="schermo attiva">
+    <header class="top">
+        <h1>🔒 Dashboard Admin</h1>
+        <div class="sottotitolo">HACCP DE.CA.GEL.</div>
+    </header>
+    <div class="campo">
+        <label for="input-password">Password</label>
+        <input type="password" id="input-password" placeholder="Inserisci password" autocomplete="current-password">
+    </div>
+    <div id="errore-login" class="errore-login" style="display:none;">Password errata, riprova.</div>
+    <button class="bottone-grande" id="btn-login">Entra</button>
+</div>
+
+<!-- SCHERMO DASHBOARD -->
+<div id="schermo-dashboard" class="schermo">
+    <header class="top">
+        <h1>📊 Dashboard Admin</h1>
+        <div class="sottotitolo" id="sottotitolo-data">—</div>
+    </header>
+
+    <section class="blocco">
+        <h2>Situazione di oggi</h2>
+        <div id="lista-oggi" class="lista-camion">Caricamento…</div>
+    </section>
+
+    <section class="blocco">
+        <h2>⚠️ Giorni mancanti (ultime 2 settimane)</h2>
+        <div class="sottotitolo-blocco">Conteggio dal lunedì al venerdì (anche il sabato nei mesi estivi)</div>
+        <div id="lista-mancanti" class="lista-mancanti">Verifica in corso…</div>
+    </section>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="dati-camion.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

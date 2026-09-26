@@ -1,0 +1,71 @@
+/* Stili aggiuntivi per la Dashboard Admin (oltre a style.css) */
+
+.errore-login {
+    color: #c0392b;
+    font-size: 14px;
+    margin: -8px 0 14px 0;
+    text-align: center;
+}
+
+.blocco {
+    background: white;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.blocco h2 {
+    font-size: 17px;
+    margin: 0 0 4px 0;
+}
+.sottotitolo-blocco {
+    font-size: 13px;
+    color: #7f8c8d;
+    margin-bottom: 14px;
+}
+
+.riga-camion {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #ecf0f1;
+    gap: 10px;
+}
+.riga-camion:last-child { border-bottom: none; }
+.riga-camion .info-camion strong { display: block; font-size: 15px; }
+.riga-camion .info-camion span { font-size: 13px; color: #7f8c8d; }
+.riga-camion .stati { display: flex; gap: 8px; flex-shrink: 0; }
+
+.pallino {
+    font-size: 12px;
+    font-weight: bold;
+    padding: 4px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.pallino.ok { background: #d4efdf; color: #196f3d; }
+.pallino.mancante { background: #fdebd0; color: #9c640c; }
+
+.lista-mancanti .messaggio-ok {
+    color: #196f3d;
+    font-weight: bold;
+    text-align: center;
+    padding: 10px 0;
+}
+
+.card-autista-mancante {
+    border: 1px solid #f5cba7;
+    background: #fef9f4;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+}
+.card-autista-mancante strong { display: block; margin-bottom: 6px; font-size: 15px; }
+.card-autista-mancante ul {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 14px;
+    color: #9c640c;
+}
+.card-autista-mancante li { margin-bottom: 2px; }

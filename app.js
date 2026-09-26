@@ -12,18 +12,7 @@ const firebaseConfig = {
     appId: "1:585663608757:web:e92845b6f14078461a0bfc",
 };
 
-// ============================================================
-// ELENCO CAMION
-// Modifica/aggiungi righe qui per tenere aggiornato l'elenco.
-// ============================================================
-const CAMION = [
-    { targa: "FH316ZA", modello: "Iveco Daily 35C15", autista: "Massimo Stecca" },
-    { targa: "FH356ZA", modello: "Iveco Daily 35C16", autista: "Harben Sallaku" },
-    { targa: "GM384DJ", modello: "Iveco Daily 35C16", autista: "Diego Tempo" },
-    { targa: "GV863DA", modello: "Renault Master", autista: "Daniele Del Corvo" },
-    { targa: "EL929SV", modello: "Iveco Daily 35/E4", autista: "Gianmarco Abbo" },
-    { targa: "DY438MM", modello: "Toyota Hilux 4X2", autista: "" },
-];
+// (l'elenco CAMION ora vive in dati-camion.js, incluso prima di questo file)
 
 // ============================================================
 // INIZIALIZZAZIONE FIREBASE (con supporto offline)
