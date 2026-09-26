@@ -17,10 +17,12 @@ const firebaseConfig = {
 // Modifica/aggiungi righe qui per tenere aggiornato l'elenco.
 // ============================================================
 const CAMION = [
-    { targa: "FH316ZA", modello: "Iveco Daily 35C15" },
-    { targa: "FH356ZA", modello: "Iveco Daily 35C16" },
-    { targa: "GM384DJ", modello: "Iveco Daily 35C16" },
-    { targa: "GV863DA", modello: "Renault Master" },
+    { targa: "FH316ZA", modello: "Iveco Daily 35C15", autista: "Massimo Stecca" },
+    { targa: "FH356ZA", modello: "Iveco Daily 35C16", autista: "Harben Sallaku" },
+    { targa: "GM384DJ", modello: "Iveco Daily 35C16", autista: "Diego Tempo" },
+    { targa: "GV863DA", modello: "Renault Master", autista: "Daniele Del Corvo" },
+    { targa: "EL929SV", modello: "Iveco Daily 35/E4", autista: "Gianmarco Abbo" },
+    { targa: "DY438MM", modello: "Toyota Hilux 4X2", autista: "" },
 ];
 
 // ============================================================
@@ -85,6 +87,12 @@ window.addEventListener("offline", aggiornaBadgeConnessione);
 // ============================================================
 // SETUP INIZIALE (nome + camion)
 // ============================================================
+const VALORE_ALTRO = "__altro__";
+
+// Elenco autisti derivato direttamente da CAMION: così c'è un solo posto
+// (l'elenco CAMION più in alto) dove tenere aggiornati nomi e targhe.
+const AUTISTI = CAMION.filter((c) => c.autista).map((c) => ({ nome: c.autista, targa: c.targa }));
+
 function popolaSelectCamion() {
     const select = document.getElementById("input-camion");
     select.innerHTML = "";
@@ -96,13 +104,51 @@ function popolaSelectCamion() {
     });
 }
 
+function popolaSelectNome() {
+    const select = document.getElementById("input-nome");
+    select.innerHTML = "";
+    AUTISTI.forEach((a) => {
+        const opzione = document.createElement("option");
+        opzione.value = a.nome;
+        opzione.textContent = a.nome;
+        select.appendChild(opzione);
+    });
+    const opzioneAltro = document.createElement("option");
+    opzioneAltro.value = VALORE_ALTRO;
+    opzioneAltro.textContent = "Altro (non in elenco)";
+    select.appendChild(opzioneAltro);
+
+    select.addEventListener("change", () => gestisciCambioNome(select.value));
+    gestisciCambioNome(select.value);
+}
+
+function gestisciCambioNome(nomeScelto) {
+    const campoAltro = document.getElementById("campo-nome-altro");
+    if (nomeScelto === VALORE_ALTRO) {
+        campoAltro.style.display = "block";
+        return;
+    }
+    campoAltro.style.display = "none";
+    // Propone in automatico il camion di solito assegnato a questo
+    // autista (ma resta modificabile subito sotto, per chi guida un
+    // camion diverso dal solito).
+    const autista = AUTISTI.find((a) => a.nome === nomeScelto);
+    if (autista) {
+        document.getElementById("input-camion").value = autista.targa;
+    }
+}
+
 function haIdentitaSalvata() {
     return localStorage.getItem("haccp_autista") && localStorage.getItem("haccp_targa");
 }
 
 document.getElementById("btn-conferma-setup").addEventListener("click", () => {
-    const nome = document.getElementById("input-nome").value.trim();
+    const sceltaNome = document.getElementById("input-nome").value;
+    const nome = sceltaNome === VALORE_ALTRO
+        ? document.getElementById("input-nome-altro").value.trim()
+        : sceltaNome;
     const targa = document.getElementById("input-camion").value;
+
     if (!nome) {
         alert("Scrivi il tuo nome prima di continuare.");
         return;
@@ -114,7 +160,19 @@ document.getElementById("btn-conferma-setup").addEventListener("click", () => {
 
 document.getElementById("btn-cambia-identita").addEventListener("click", () => {
     if (annullaAscolto) annullaAscolto();
-    document.getElementById("input-nome").value = localStorage.getItem("haccp_autista") || "";
+
+    const nomeSalvato = localStorage.getItem("haccp_autista") || "";
+    const selectNome = document.getElementById("input-nome");
+    const campoAltro = document.getElementById("campo-nome-altro");
+
+    if (AUTISTI.some((a) => a.nome === nomeSalvato)) {
+        selectNome.value = nomeSalvato;
+        campoAltro.style.display = "none";
+    } else {
+        selectNome.value = VALORE_ALTRO;
+        document.getElementById("input-nome-altro").value = nomeSalvato;
+        campoAltro.style.display = "block";
+    }
     document.getElementById("input-camion").value = localStorage.getItem("haccp_targa") || "";
     mostraSchermo("schermo-setup");
 });
@@ -243,6 +301,7 @@ if ("serviceWorker" in navigator) {
 // AVVIO
 // ============================================================
 popolaSelectCamion();
+popolaSelectNome();
 aggiornaBadgeConnessione();
 
 if (haIdentitaSalvata()) {
