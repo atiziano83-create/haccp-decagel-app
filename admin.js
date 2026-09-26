@@ -35,7 +35,7 @@ function oraCorrenteHHMM() {
 // solo nei mesi estivi. Modifica l'elenco qui sotto per cambiare
 // quali mesi contano come "estivi" (1 = gennaio ... 12 = dicembre).
 // ============================================================
-const MESI_ESTIVI = [6, 7, 8, 9]; // giugno, luglio, agosto, settembre
+const MESI_ESTIVI = [6, 7, 8]; // giugno, luglio, agosto
 
 function giornoLavorativo(data) {
     const giorno = data.getDay(); // 0 = domenica ... 6 = sabato
