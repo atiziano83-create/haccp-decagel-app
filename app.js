@@ -27,6 +27,16 @@ db.enablePersistence({ synchronizeTabs: true }).catch((errore) => {
 // nulla all'autista. Serve perché le regole di sicurezza ora
 // richiedono che chi legge/scrive sia "autenticato" (anche solo in
 // modo anonimo), per bloccare accessi da fuori dall'app.
+// Aspettiamo che l'accesso sia confermato (onAuthStateChanged) prima
+// di avviare la parte che legge/scrive su Firestore, altrimenti si
+// rischia di provare a leggere prima di essersi "presentati".
+let appGiaAvviata = false;
+firebase.auth().onAuthStateChanged((utente) => {
+    if (utente && !appGiaAvviata) {
+        appGiaAvviata = true;
+        avviaApp();
+    }
+});
 firebase.auth().signInAnonymously().catch((errore) => {
     console.error("Accesso anonimo non riuscito:", errore.code);
 });
@@ -295,14 +305,17 @@ if ("serviceWorker" in navigator) {
 }
 
 // ============================================================
-// AVVIO
+// AVVIO (chiamato da onAuthStateChanged qui sopra, una volta
+// confermato l'accesso anonimo)
 // ============================================================
-popolaSelectCamion();
-popolaSelectNome();
-aggiornaBadgeConnessione();
+function avviaApp() {
+    popolaSelectCamion();
+    popolaSelectNome();
+    aggiornaBadgeConnessione();
 
-if (haIdentitaSalvata()) {
-    avviaSchermoPrincipale();
-} else {
-    mostraSchermo("schermo-setup");
+    if (haIdentitaSalvata()) {
+        avviaSchermoPrincipale();
+    } else {
+        mostraSchermo("schermo-setup");
+    }
 }
