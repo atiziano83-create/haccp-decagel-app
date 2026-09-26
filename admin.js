@@ -623,3 +623,260 @@ if (sessionStorage.getItem("haccp_admin_ok") === "1") {
 } else {
     mostraSchermo("schermo-login");
 }
+
+// ============================================================
+// REPORT MENSILE (da mostrare o stampare in caso di controlli)
+// ============================================================
+function dataLeggibileBreve(dataISOStr) {
+    const [anno, mese, giorno] = dataISOStr.split("-");
+    return `${giorno}/${mese}/${anno}`;
+}
+
+function primoEUltimoGiornoMese(annoMeseStr) {
+    // annoMeseStr arriva da <input type="month"> nel formato "AAAA-MM"
+    const [anno, mese] = annoMeseStr.split("-").map(Number);
+    const primo = `${anno}-${String(mese).padStart(2, "0")}-01`;
+    const ultimoGiorno = new Date(anno, mese, 0).getDate(); // giorno 0 del mese dopo = ultimo giorno di questo mese
+    const ultimo = `${anno}-${String(mese).padStart(2, "0")}-${String(ultimoGiorno).padStart(2, "0")}`;
+    return { primo, ultimo };
+}
+
+document.getElementById("btn-report").addEventListener("click", () => {
+    mostraSchermo("schermo-report");
+    // Precompila con il mese corrente
+    const oggi = new Date();
+    document.getElementById("input-mese-report").value =
+        `${oggi.getFullYear()}-${String(oggi.getMonth() + 1).padStart(2, "0")}`;
+    document.getElementById("contenuto-report").innerHTML = "";
+    document.getElementById("btn-stampa-report").style.display = "none";
+    document.getElementById("input-tipo-report").value = "tutto";
+    document.getElementById("campo-camion-report").style.display = "none";
+    popolaSelectCamionReport();
+});
+document.getElementById("btn-torna-dashboard-report").addEventListener("click", () => mostraSchermo("schermo-dashboard"));
+document.getElementById("btn-stampa-report").addEventListener("click", () => window.print());
+
+document.getElementById("input-tipo-report").addEventListener("change", () => {
+    const tipo = document.getElementById("input-tipo-report").value;
+    document.getElementById("campo-camion-report").style.display = tipo === "camion" ? "block" : "none";
+});
+
+function popolaSelectCamionReport() {
+    const select = document.getElementById("input-camion-report");
+    if (select.dataset.popolato === "1") return;
+    select.innerHTML = "";
+    const opzioneTutti = document.createElement("option");
+    opzioneTutti.value = "";
+    opzioneTutti.textContent = "Tutti i furgoni";
+    select.appendChild(opzioneTutti);
+    CAMION.forEach((c) => {
+        const opzione = document.createElement("option");
+        opzione.value = c.targa;
+        opzione.textContent = `${c.targa} - ${c.modello}${c.autista ? " (" + c.autista + ")" : ""}`;
+        select.appendChild(opzione);
+    });
+    select.dataset.popolato = "1";
+}
+
+document.getElementById("btn-genera-report").addEventListener("click", async () => {
+    const meseScelto = document.getElementById("input-mese-report").value;
+    if (!meseScelto) { alert("Scegli un mese."); return; }
+    const tipoReport = document.getElementById("input-tipo-report").value;
+    const targaScelta = document.getElementById("input-camion-report").value;
+
+    const contenitore = document.getElementById("contenuto-report");
+    contenitore.innerHTML = "<p>Generazione report in corso…</p>";
+    document.getElementById("btn-stampa-report").style.display = "none";
+
+    await accessoAnonimoPronto;
+    const { primo, ultimo } = primoEUltimoGiornoMese(meseScelto);
+
+    // Scarica solo le collezioni che servono davvero per il tipo scelto.
+    const serveTutto = tipoReport === "tutto";
+    const [camion, celle, ricevimenti, pulizie] = await Promise.all([
+        (serveTutto || tipoReport === "camion") ? recuperaIntervallo("temp_camion", primo, ultimo) : [],
+        (serveTutto || tipoReport === "celle") ? recuperaIntervallo("temp_celle", primo, ultimo) : [],
+        (serveTutto || tipoReport === "ricevimento") ? recuperaIntervallo("ricevimento_merce", primo, ultimo) : [],
+        (serveTutto || tipoReport === "pulizie") ? recuperaIntervallo("registro_pulizie", primo, ultimo) : [],
+    ]);
+
+    const camionFiltrati = (tipoReport === "camion" && targaScelta) ? camion.filter((r) => r.targa === targaScelta) : camion;
+
+    camionFiltrati.sort((a, b) => (a.data + a.targa).localeCompare(b.data + b.targa));
+    celle.sort((a, b) => (a.data + a.id_cella).localeCompare(b.data + b.id_cella));
+    ricevimenti.sort((a, b) => (a.data + (a.ora || "")).localeCompare(b.data + (b.ora || "")));
+    pulizie.sort((a, b) => (a.data + (a.ora || "")).localeCompare(b.data + (b.ora || "")));
+
+    const titoloMese = new Date(`${meseScelto}-01T00:00:00`)
+        .toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+
+    const sottotitoliPerTipo = {
+        tutto: "Report completo",
+        camion: targaScelta ? `Temperature Camion — ${targaScelta}` : "Temperature Camion — tutti i furgoni",
+        celle: "Temperature Celle",
+        ricevimento: "Ricevimento Merce",
+        pulizie: "Registro Pulizie",
+    };
+
+    let sezioniHtml = "";
+    if (serveTutto || tipoReport === "camion") sezioniHtml += sezioneTabellaCamion(camionFiltrati);
+    if (serveTutto || tipoReport === "celle") sezioniHtml += sezioneTabellaCelle(celle);
+    if (serveTutto || tipoReport === "ricevimento") sezioniHtml += sezioneTabellaRicevimenti(ricevimenti);
+    if (serveTutto || tipoReport === "pulizie") sezioniHtml += sezioneTabellaPulizie(pulizie);
+
+    contenitore.innerHTML = `
+        <div class="intestazione-report">
+            <div class="nome-azienda">${AZIENDA.ragioneSociale}</div>
+            <div class="dati-azienda">${AZIENDA.indirizzo} · ${AZIENDA.cfPiva}</div>
+            <div class="dati-azienda">Tel. ${AZIENDA.telefono} · ${AZIENDA.email}</div>
+            <div class="titolo-report">${sottotitoliPerTipo[tipoReport]} — ${titoloMese}</div>
+        </div>
+        ${sezioniHtml}
+        <div class="blocco-firma">
+            <div class="riga-firma">
+                <div class="etichetta-firma">Firma del responsabile<br>dell'autocontrollo</div>
+                <div class="linea-firma">&nbsp;</div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById("btn-stampa-report").style.display = "block";
+});
+
+async function recuperaIntervallo(collezione, primo, ultimo) {
+    try {
+        const snap = await db.collection(collezione)
+            .where("data", ">=", primo)
+            .where("data", "<=", ultimo)
+            .get();
+        return snap.docs.map((doc) => doc.data());
+    } catch (errore) {
+        console.error(`Errore lettura ${collezione} per il report:`, errore);
+        return [];
+    }
+}
+
+function sezioneTabellaCamion(righe) {
+    if (righe.length === 0) {
+        return `<div class="report-sezione"><h3>🚚 Temperature Camion</h3><div class="nessun-dato">Nessun dato nel mese selezionato.</div></div>`;
+    }
+
+    // Raggruppa per targa, così ogni furgone mostra chiaramente il
+    // proprio operatore/targa invece di ripeterli su ogni riga.
+    const gruppi = {};
+    righe.forEach((r) => {
+        if (!gruppi[r.targa]) gruppi[r.targa] = [];
+        gruppi[r.targa].push(r);
+    });
+
+    const sottotabelle = Object.keys(gruppi).sort().map((targa) => {
+        const righeGruppo = gruppi[targa];
+        const camionInfo = CAMION.find((c) => c.targa === targa);
+        const nomiAutisti = [...new Set(righeGruppo.map((r) => r.autista).filter(Boolean))].join(", ");
+        const corpo = righeGruppo.map((r) => `
+            <tr>
+                <td>${dataLeggibileBreve(r.data)}</td>
+                <td class="centro">${r.temp_partenza != null ? `${r.temp_partenza}°C alle ${r.ora_partenza || "—"}` : "—"}</td>
+                <td class="centro">${r.temp_fine != null ? `${r.temp_fine}°C alle ${r.ora_fine || "—"}` : "—"}</td>
+            </tr>
+        `).join("");
+        return `
+            <div class="sotto-tabella-titolo">🚚 Targa ${targa}${camionInfo ? ` — ${camionInfo.modello}` : ""} · Operatore: ${nomiAutisti || "—"}</div>
+            <table class="tabella-report">
+                <thead><tr><th>Data</th><th>Partenza</th><th>Fine</th></tr></thead>
+                <tbody>${corpo}</tbody>
+            </table>
+        `;
+    }).join("");
+
+    return `<div class="report-sezione"><h3>🚚 Temperature Camion</h3>${sottotabelle}</div>`;
+}
+
+function sezioneTabellaCelle(righe) {
+    if (righe.length === 0) {
+        return `<div class="report-sezione"><h3>🧊 Temperature Celle</h3><div class="nessun-dato">Nessun dato nel mese selezionato.</div></div>`;
+    }
+
+    // Raggruppa per cella, con l'ID e il nome ben visibili.
+    const gruppi = {};
+    righe.forEach((r) => {
+        if (!gruppi[r.id_cella]) gruppi[r.id_cella] = [];
+        gruppi[r.id_cella].push(r);
+    });
+
+    const sottotabelle = Object.keys(gruppi).sort().map((idCella) => {
+        const righeGruppo = gruppi[idCella];
+        const cellaInfo = CELLE.find((c) => c.id === idCella);
+        const nomeCella = cellaInfo ? cellaInfo.nome : (righeGruppo[0].nome_cella || idCella);
+        const corpo = righeGruppo.map((r) => `
+            <tr>
+                <td>${dataLeggibileBreve(r.data)}</td>
+                <td class="centro">${r.temp_mattina != null ? `${r.temp_mattina}°C alle ${r.ora_mattina || "—"}` : "—"}</td>
+                <td class="centro">${r.temp_pomeriggio != null ? `${r.temp_pomeriggio}°C alle ${r.ora_pomeriggio || "—"}` : "—"}</td>
+                <td>${r.note || "—"}</td>
+            </tr>
+        `).join("");
+        return `
+            <div class="sotto-tabella-titolo">🧊 ${nomeCella} (${idCella})</div>
+            <table class="tabella-report">
+                <thead><tr><th>Data</th><th>Mattina</th><th>Pomeriggio</th><th>Note</th></tr></thead>
+                <tbody>${corpo}</tbody>
+            </table>
+        `;
+    }).join("");
+
+    return `<div class="report-sezione"><h3>🧊 Temperature Celle</h3>${sottotabelle}</div>`;
+}
+
+function sezioneTabellaRicevimenti(righe) {
+    if (righe.length === 0) {
+        return `<div class="report-sezione"><h3>📦 Ricevimento Merce</h3><div class="nessun-dato">Nessun dato nel mese selezionato.</div></div>`;
+    }
+    const corpo = righe.map((r) => `
+        <tr>
+            <td>${dataLeggibileBreve(r.data)}</td>
+            <td class="centro">${r.ora || "—"}</td>
+            <td>${r.fornitore || "—"}</td>
+            <td>${r.categoria || "—"}</td>
+            <td>${r.num_doc || "—"}</td>
+            <td class="centro">${r.conformita === "CONFORME" ? "✅ Conforme" : "⚠️ Non conforme"}</td>
+            <td>${r.note || "—"}</td>
+            <td>${r.operatore || "—"}</td>
+        </tr>
+    `).join("");
+    return `
+        <div class="report-sezione">
+            <h3>📦 Ricevimento Merce</h3>
+            <table class="tabella-report">
+                <thead><tr><th>Data</th><th>Ora</th><th>Fornitore</th><th>Categoria</th><th>DDT</th><th>Conformità</th><th>Note</th><th>Operatore</th></tr></thead>
+                <tbody>${corpo}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+function sezioneTabellaPulizie(righe) {
+    if (righe.length === 0) {
+        return `<div class="report-sezione"><h3>🧹 Registro Pulizie</h3><div class="nessun-dato">Nessun dato nel mese selezionato.</div></div>`;
+    }
+    const corpo = righe.map((r) => `
+        <tr>
+            <td>${dataLeggibileBreve(r.data)}</td>
+            <td class="centro">${r.ora || "—"}</td>
+            <td>${r.area || "—"}</td>
+            <td>${r.frequenza || "—"}</td>
+            <td class="centro">${r.esito === "Completato" ? "✅ Completato" : "⚠️ Non completato"}</td>
+            <td>${r.note || "—"}</td>
+            <td>${r.operatore || "—"}</td>
+        </tr>
+    `).join("");
+    return `
+        <div class="report-sezione">
+            <h3>🧹 Registro Pulizie</h3>
+            <table class="tabella-report">
+                <thead><tr><th>Data</th><th>Ora</th><th>Area</th><th>Frequenza</th><th>Esito</th><th>Note</th><th>Operatore</th></tr></thead>
+                <tbody>${corpo}</tbody>
+            </table>
+        </div>
+    `;
+}

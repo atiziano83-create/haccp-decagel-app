@@ -89,6 +89,99 @@
     margin-top: 4px;
 }
 
+/* --- Report mensile --- */
+.intestazione-report {
+    text-align: center;
+    border-bottom: 2px solid #2c3e50;
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+}
+.intestazione-report .nome-azienda {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+.intestazione-report .dati-azienda {
+    font-size: 12px;
+    color: #7f8c8d;
+}
+.intestazione-report .titolo-report {
+    margin-top: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    text-transform: capitalize;
+}
+
+.sotto-tabella-titolo {
+    font-size: 13px;
+    font-weight: bold;
+    margin: 12px 0 4px 0;
+    color: #34495e;
+}
+.sotto-tabella-titolo:first-child { margin-top: 0; }
+
+.blocco-firma {
+    margin-top: 30px;
+    break-inside: avoid;
+}
+.blocco-firma .riga-firma {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 40px;
+    gap: 10px;
+}
+.blocco-firma .riga-firma .linea-firma {
+    display: inline-block;
+    min-width: 260px;
+    border-top: 1px solid #2c3e50;
+    text-align: center;
+    padding-top: 4px;
+    font-size: 12px;
+    color: #7f8c8d;
+}
+.blocco-firma .etichetta-firma {
+    font-size: 13px;
+    text-align: right;
+}
+
+.report-sezione {
+    background: white;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.report-sezione h3 {
+    font-size: 16px;
+    margin: 0 0 10px 0;
+}
+.report-sezione .nessun-dato {
+    color: #7f8c8d;
+    font-size: 14px;
+}
+table.tabella-report {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+table.tabella-report th, table.tabella-report td {
+    border: 1px solid #dfe4e6;
+    padding: 6px 8px;
+    text-align: left;
+}
+table.tabella-report th {
+    background: #f4f6f8;
+}
+table.tabella-report td.centro { text-align: center; }
+
+@media print {
+    .no-stampa { display: none !important; }
+    body { background: white; }
+    .schermo { padding: 0; }
+    .report-sezione { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+    table.tabella-report { font-size: 11px; }
+}
+
 .errore-login {
     color: #c0392b;
     font-size: 14px;
