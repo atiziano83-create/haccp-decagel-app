@@ -214,6 +214,23 @@
     </section>
 </div>
 
+<!-- Foglio modale per inserire a posteriori la temperatura di un giorno mancante (camion) -->
+<div class="overlay" id="overlay-backfill-camion">
+    <div class="foglio-temp">
+        <h2 id="titolo-modale-backfill">Temperatura</h2>
+        <div class="ora-corrente" id="sottotitolo-modale-backfill">—</div>
+
+        <div class="selettore-temp">
+            <button id="btn-meno-backfill">−</button>
+            <div class="valore"><span id="valore-temp-backfill">-18</span><span class="unita">°C</span></div>
+            <button id="btn-piu-backfill">+</button>
+        </div>
+
+        <button class="conferma" id="btn-conferma-backfill">✅ Conferma e salva</button>
+        <button class="annulla" id="btn-annulla-backfill">Annulla</button>
+    </div>
+</div>
+
 <!-- Foglio modale per inserire la temperatura di una cella -->
 <div class="overlay" id="overlay-temp-cella">
     <div class="foglio-temp">

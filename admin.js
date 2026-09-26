@@ -190,23 +190,103 @@ async function caricaGiorniMancanti() {
 
         if (mancanti.length > 0) {
             qualcheMancante = true;
-            const card = document.createElement("div");
-            card.className = "card-autista-mancante";
-            const elenco = mancanti.map((giornoISO) => {
+            const dettagli = document.createElement("details");
+            dettagli.className = "card-autista-mancante";
+
+            const righe = mancanti.map((giornoISO) => {
                 const dati = mappaDati[giornoISO];
-                const parziale = dati && (dati.temp_partenza !== undefined || dati.temp_fine !== undefined);
+                const mancaPartenza = !dati || dati.temp_partenza === undefined || dati.temp_partenza === null;
+                const mancaFine = !dati || dati.temp_fine === undefined || dati.temp_fine === null;
                 const dataLeg = dataLeggibile(new Date(giornoISO + "T00:00:00"));
-                return `<li>${dataLeg}${parziale ? " (registrazione incompleta)" : " (nessun dato)"}</li>`;
+
+                const bottoni = [];
+                if (mancaPartenza) bottoni.push(`<button class="btn-inserisci-mancante" data-targa="${camion.targa}" data-giorno="${giornoISO}" data-momento="partenza">🌅 Inserisci partenza</button>`);
+                if (mancaFine) bottoni.push(`<button class="btn-inserisci-mancante" data-targa="${camion.targa}" data-giorno="${giornoISO}" data-momento="fine">🌇 Inserisci fine</button>`);
+
+                return `<li>${dataLeg} <div class="azioni-giorno-mancante">${bottoni.join("")}</div></li>`;
             }).join("");
-            card.innerHTML = `<strong>${camion.autista} — ${camion.targa}</strong><ul>${elenco}</ul>`;
-            contenitore.appendChild(card);
+
+            dettagli.innerHTML = `
+                <summary>${camion.autista} — ${camion.targa} (${mancanti.length} ${mancanti.length === 1 ? "giorno" : "giorni"})</summary>
+                <ul>${righe}</ul>
+            `;
+            contenitore.appendChild(dettagli);
         }
     }
 
     if (!qualcheMancante) {
         contenitore.innerHTML = '<div class="messaggio-ok">✅ Nessun giorno mancante negli ultimi 14 giorni lavorativi.</div>';
     }
+
+    contenitore.querySelectorAll(".btn-inserisci-mancante").forEach((bottone) => {
+        bottone.addEventListener("click", () => {
+            apriModaleBackfillCamion(bottone.dataset.targa, bottone.dataset.giorno, bottone.dataset.momento);
+        });
+    });
 }
+
+// ============================================================
+// INSERIMENTO A POSTERIORI (giorni mancanti) TEMP CAMION
+// ============================================================
+let backfillTarga = null;
+let backfillGiorno = null;
+let backfillMomento = null; // "partenza" oppure "fine"
+let valoreTempBackfill = -18;
+
+function apriModaleBackfillCamion(targa, giornoISO, momento) {
+    backfillTarga = targa;
+    backfillGiorno = giornoISO;
+    backfillMomento = momento;
+    valoreTempBackfill = -18;
+
+    const camionInfo = CAMION.find((c) => c.targa === targa);
+    document.getElementById("valore-temp-backfill").textContent = valoreTempBackfill;
+    document.getElementById("titolo-modale-backfill").textContent =
+        `${momento === "partenza" ? "🌅 Partenza" : "🌇 Fine"} — ${camionInfo ? camionInfo.autista : targa}`;
+    document.getElementById("sottotitolo-modale-backfill").textContent =
+        `${targa} · ${dataLeggibile(new Date(giornoISO + "T00:00:00"))}`;
+    document.getElementById("overlay-backfill-camion").classList.add("attiva");
+}
+
+function chiudiModaleBackfillCamion() {
+    document.getElementById("overlay-backfill-camion").classList.remove("attiva");
+    backfillTarga = null;
+    backfillGiorno = null;
+    backfillMomento = null;
+}
+
+document.getElementById("btn-meno-backfill").addEventListener("click", () => {
+    valoreTempBackfill -= 1;
+    document.getElementById("valore-temp-backfill").textContent = valoreTempBackfill;
+});
+document.getElementById("btn-piu-backfill").addEventListener("click", () => {
+    valoreTempBackfill += 1;
+    document.getElementById("valore-temp-backfill").textContent = valoreTempBackfill;
+});
+document.getElementById("btn-annulla-backfill").addEventListener("click", chiudiModaleBackfillCamion);
+
+document.getElementById("btn-conferma-backfill").addEventListener("click", async () => {
+    if (!backfillTarga || !backfillGiorno || !backfillMomento) return;
+
+    const camionInfo = CAMION.find((c) => c.targa === backfillTarga);
+    const campoTemp = backfillMomento === "partenza" ? "temp_partenza" : "temp_fine";
+    const campoOra = backfillMomento === "partenza" ? "ora_partenza" : "ora_fine";
+    const idDoc = `${backfillGiorno}_${backfillTarga}`;
+
+    const dati = {
+        data: backfillGiorno,
+        targa: backfillTarga,
+        autista: camionInfo ? camionInfo.autista : "",
+        [campoTemp]: valoreTempBackfill,
+        [campoOra]: `${oraCorrenteHHMM()} (inserito da admin)`,
+        aggiornato_il: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await db.collection("temp_camion").doc(idDoc).set(dati, { merge: true });
+
+    chiudiModaleBackfillCamion();
+    caricaGiorniMancanti();
+});
 
 // ============================================================
 // TEMPERATURE CELLE (mattina/pomeriggio)

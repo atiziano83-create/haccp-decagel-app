@@ -243,11 +243,44 @@ table.tabella-report td.centro { text-align: center; }
     padding: 12px 14px;
     margin-bottom: 12px;
 }
-.card-autista-mancante strong { display: block; margin-bottom: 6px; font-size: 15px; }
+.card-autista-mancante summary {
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    list-style: none;
+}
+.card-autista-mancante summary::-webkit-details-marker { display: none; }
+.card-autista-mancante summary::before {
+    content: "▸ ";
+}
+.card-autista-mancante[open] summary::before {
+    content: "▾ ";
+}
 .card-autista-mancante ul {
-    margin: 0;
-    padding-left: 18px;
+    margin: 10px 0 0 0;
+    padding: 0;
+    list-style: none;
     font-size: 14px;
     color: #9c640c;
 }
-.card-autista-mancante li { margin-bottom: 2px; }
+.card-autista-mancante li {
+    padding: 8px 0;
+    border-top: 1px solid #f5cba7;
+}
+.card-autista-mancante li:first-child { border-top: none; }
+.azioni-giorno-mancante {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+.btn-inserisci-mancante {
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: bold;
+    border: 1px solid #e67e22;
+    border-radius: 8px;
+    background: white;
+    color: #e67e22;
+}
+.btn-inserisci-mancante:active { background: #fdebd0; }
