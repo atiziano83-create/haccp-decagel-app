@@ -30,6 +30,65 @@
     margin-bottom: 28px;
 }
 
+.campo textarea {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    border: 2px solid #d5dbdb;
+    border-radius: 10px;
+    background: white;
+    font-family: inherit;
+    resize: vertical;
+}
+.campo textarea:focus { border-color: #2c3e50; outline: none; }
+
+.toggle-conformita {
+    display: flex;
+    gap: 10px;
+}
+.btn-conformita {
+    flex: 1;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: bold;
+    border: 2px solid #d5dbdb;
+    border-radius: 10px;
+    background: white;
+    color: #7f8c8d;
+}
+.btn-conformita.conforme.selezionato {
+    background: #d4efdf;
+    border-color: #27ae60;
+    color: #196f3d;
+}
+.btn-conformita.non-conforme.selezionato {
+    background: #fdebd0;
+    border-color: #e67e22;
+    color: #9c640c;
+}
+
+.riga-ricevimento {
+    padding: 12px 0;
+    border-bottom: 1px solid #ecf0f1;
+}
+.riga-ricevimento:last-child { border-bottom: none; }
+.riga-ricevimento .riga-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+.riga-ricevimento strong { font-size: 15px; }
+.riga-ricevimento .dettagli {
+    font-size: 13px;
+    color: #7f8c8d;
+}
+.riga-ricevimento .note-ricevimento {
+    font-size: 13px;
+    color: #9c640c;
+    margin-top: 4px;
+}
+
 .errore-login {
     color: #c0392b;
     font-size: 14px;

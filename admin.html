@@ -35,6 +35,7 @@
 
     <div class="nav-sezioni">
         <button id="btn-celle" class="bottone-nav">🧊 Temp Celle</button>
+        <button id="btn-ricevimento" class="bottone-nav">📦 Ricevimento Merce</button>
     </div>
 
     <section class="blocco">
@@ -57,6 +58,73 @@
     </header>
     <button class="bottone-secondario" id="btn-torna-dashboard">← Torna alla Dashboard</button>
     <div id="lista-celle"></div>
+</div>
+
+<!-- SCHERMO RICEVIMENTO MERCE -->
+<div id="schermo-ricevimento" class="schermo">
+    <header class="top">
+        <h1>📦 Ricevimento Merce</h1>
+        <div class="sottotitolo" id="sottotitolo-data-ricevimento">—</div>
+    </header>
+    <button class="bottone-secondario" id="btn-torna-dashboard-ricevimento">← Torna alla Dashboard</button>
+
+    <div class="blocco">
+        <h2>Nuovo ricevimento</h2>
+
+        <div class="campo">
+            <label for="input-fornitore">Fornitore</label>
+            <select id="input-fornitore"></select>
+        </div>
+        <div class="campo" id="campo-fornitore-altro" style="display:none;">
+            <label for="input-fornitore-altro">Scrivi il fornitore</label>
+            <input type="text" id="input-fornitore-altro" placeholder="Nome fornitore">
+        </div>
+
+        <div class="campo">
+            <label for="input-categoria">Categoria prodotto</label>
+            <select id="input-categoria">
+                <option value="Surgelato">Surgelato</option>
+                <option value="Fresco">Fresco</option>
+                <option value="Secco">Secco</option>
+                <option value="Altro">Altro</option>
+            </select>
+        </div>
+
+        <div class="campo">
+            <label for="input-num-doc">Numero documento (DDT)</label>
+            <input type="text" id="input-num-doc" placeholder="Es. 1837" inputmode="text">
+        </div>
+
+        <div class="campo">
+            <label for="input-temp-automezzo">Temperatura automezzo del fornitore (°C, facoltativa)</label>
+            <input type="number" id="input-temp-automezzo" placeholder="Es. -20" step="1">
+        </div>
+
+        <div class="campo">
+            <label>Conformità</label>
+            <div class="toggle-conformita">
+                <button type="button" class="btn-conformita conforme" id="btn-conforme">✅ Conforme</button>
+                <button type="button" class="btn-conformita non-conforme" id="btn-non-conforme">⚠️ Non conforme</button>
+            </div>
+        </div>
+
+        <div class="campo">
+            <label for="input-note-ricevimento">Note / problematiche</label>
+            <textarea id="input-note-ricevimento" rows="3" placeholder="Facoltative se conforme, consigliate se non conforme"></textarea>
+        </div>
+
+        <div class="campo">
+            <label for="input-operatore">Operatore</label>
+            <input type="text" id="input-operatore" placeholder="Il tuo nome" autocomplete="name">
+        </div>
+
+        <button class="bottone-grande" id="btn-salva-ricevimento">Registra ricevimento</button>
+    </div>
+
+    <section class="blocco">
+        <h2>Ricevimenti di oggi</h2>
+        <div id="lista-ricevimenti" class="lista-camion">Caricamento…</div>
+    </section>
 </div>
 
 <!-- Foglio modale per inserire la temperatura di una cella -->
@@ -86,6 +154,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="dati-camion.js"></script>
 <script src="dati-celle.js"></script>
+<script src="dati-fornitori.js"></script>
 <script src="admin.js"></script>
 </body>
 </html>

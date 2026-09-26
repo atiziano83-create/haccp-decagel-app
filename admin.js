@@ -327,6 +327,141 @@ document.getElementById("btn-conferma-temp-cella").addEventListener("click", asy
 });
 
 // ============================================================
+// RICEVIMENTO MERCE
+// ============================================================
+const VALORE_FORNITORE_ALTRO = "__altro__";
+let conformitaScelta = null; // "CONFORME" oppure "NON_CONFORME"
+
+document.getElementById("btn-ricevimento").addEventListener("click", async () => {
+    mostraSchermo("schermo-ricevimento");
+    document.getElementById("sottotitolo-data-ricevimento").textContent = dataLeggibile(new Date());
+    popolaSelectFornitore();
+    precompilaOperatore();
+    await accessoAnonimoPronto;
+    caricaRicevimentiOggi();
+});
+document.getElementById("btn-torna-dashboard-ricevimento").addEventListener("click", () => mostraSchermo("schermo-dashboard"));
+
+function popolaSelectFornitore() {
+    const select = document.getElementById("input-fornitore");
+    if (select.dataset.popolato === "1") return; // evita di ripopolare ad ogni apertura
+    select.innerHTML = "";
+    FORNITORI.forEach((nome) => {
+        const opzione = document.createElement("option");
+        opzione.value = nome;
+        opzione.textContent = nome;
+        select.appendChild(opzione);
+    });
+    const opzioneAltro = document.createElement("option");
+    opzioneAltro.value = VALORE_FORNITORE_ALTRO;
+    opzioneAltro.textContent = "Altro (non in elenco)";
+    select.appendChild(opzioneAltro);
+    select.dataset.popolato = "1";
+
+    select.addEventListener("change", () => {
+        document.getElementById("campo-fornitore-altro").style.display =
+            select.value === VALORE_FORNITORE_ALTRO ? "block" : "none";
+    });
+}
+
+function precompilaOperatore() {
+    const campo = document.getElementById("input-operatore");
+    if (!campo.value) {
+        campo.value = localStorage.getItem("haccp_operatore_ricevimento") || "";
+    }
+}
+
+function impostaConformita(valore) {
+    conformitaScelta = valore;
+    document.getElementById("btn-conforme").classList.toggle("selezionato", valore === "CONFORME");
+    document.getElementById("btn-non-conforme").classList.toggle("selezionato", valore === "NON_CONFORME");
+}
+document.getElementById("btn-conforme").addEventListener("click", () => impostaConformita("CONFORME"));
+document.getElementById("btn-non-conforme").addEventListener("click", () => impostaConformita("NON_CONFORME"));
+
+document.getElementById("btn-salva-ricevimento").addEventListener("click", async () => {
+    const sceltaFornitore = document.getElementById("input-fornitore").value;
+    const fornitore = sceltaFornitore === VALORE_FORNITORE_ALTRO
+        ? document.getElementById("input-fornitore-altro").value.trim()
+        : sceltaFornitore;
+    const categoria = document.getElementById("input-categoria").value;
+    const numDoc = document.getElementById("input-num-doc").value.trim();
+    const tempTesto = document.getElementById("input-temp-automezzo").value;
+    const note = document.getElementById("input-note-ricevimento").value.trim();
+    const operatore = document.getElementById("input-operatore").value.trim();
+
+    if (!fornitore) { alert("Indica il fornitore."); return; }
+    if (!conformitaScelta) { alert("Seleziona la conformità (Conforme / Non conforme)."); return; }
+    if (!operatore) { alert("Scrivi il nome dell'operatore."); return; }
+
+    const dati = {
+        data: dataISO(new Date()),
+        ora: oraCorrenteHHMM(),
+        fornitore,
+        categoria,
+        num_doc: numDoc,
+        conformita: conformitaScelta,
+        note,
+        operatore,
+        creato_il: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    if (tempTesto !== "") dati.temp_automezzo = Number(tempTesto);
+
+    localStorage.setItem("haccp_operatore_ricevimento", operatore);
+
+    // .add() funziona anche offline: la scrittura resta in coda in
+    // locale e parte da sola non appena torna la connessione.
+    db.collection("ricevimento_merce").add(dati);
+
+    // Reset del form per il prossimo ricevimento
+    document.getElementById("input-num-doc").value = "";
+    document.getElementById("input-temp-automezzo").value = "";
+    document.getElementById("input-note-ricevimento").value = "";
+    impostaConformita(null);
+
+    caricaRicevimentiOggi();
+});
+
+async function caricaRicevimentiOggi() {
+    const contenitore = document.getElementById("lista-ricevimenti");
+    contenitore.innerHTML = "Caricamento…";
+    const oggiISO = dataISO(new Date());
+
+    let documenti = [];
+    try {
+        const snap = await db.collection("ricevimento_merce").where("data", "==", oggiISO).get();
+        documenti = snap.docs.map((doc) => doc.data());
+    } catch (errore) {
+        console.error("Errore lettura ricevimenti di oggi:", errore);
+    }
+
+    if (documenti.length === 0) {
+        contenitore.innerHTML = '<div class="messaggio-ok">Nessun ricevimento registrato oggi.</div>';
+        return;
+    }
+
+    documenti.sort((a, b) => (a.ora || "").localeCompare(b.ora || ""));
+
+    contenitore.innerHTML = documenti.map((r) => {
+        const badge = r.conformita === "CONFORME"
+            ? '<span class="pallino ok">✅ Conforme</span>'
+            : '<span class="pallino mancante">⚠️ Non conforme</span>';
+        const nota = r.note ? `<div class="note-ricevimento">📝 ${r.note}</div>` : "";
+        const temp = r.temp_automezzo !== undefined ? ` · ${r.temp_automezzo}°C automezzo` : "";
+        return `
+            <div class="riga-ricevimento">
+                <div class="riga-top">
+                    <strong>${r.fornitore}</strong>
+                    ${badge}
+                </div>
+                <div class="dettagli">${r.ora || "—"} · ${r.categoria || "—"} · DDT ${r.num_doc || "—"}${temp} · ${r.operatore || "—"}</div>
+                ${nota}
+            </div>
+        `;
+    }).join("");
+}
+
+// ============================================================
 // AVVIO: se la sessione ha già superato il login in questa scheda,
 // entra direttamente (evita di richiedere la password ad ogni click
 // se l'admin naviga avanti e indietro nella stessa sessione browser).
