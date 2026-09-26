@@ -33,6 +33,10 @@
         <div class="sottotitolo" id="sottotitolo-data">—</div>
     </header>
 
+    <div class="nav-sezioni">
+        <button id="btn-celle" class="bottone-nav">🧊 Temp Celle</button>
+    </div>
+
     <section class="blocco">
         <h2>Situazione di oggi</h2>
         <div id="lista-oggi" class="lista-camion">Caricamento…</div>
@@ -45,10 +49,43 @@
     </section>
 </div>
 
+<!-- SCHERMO CELLE: temperature celle frigo fisse (mattina/pomeriggio) -->
+<div id="schermo-celle" class="schermo">
+    <header class="top">
+        <h1>🧊 Temperature Celle</h1>
+        <div class="sottotitolo" id="sottotitolo-data-celle">—</div>
+    </header>
+    <button class="bottone-secondario" id="btn-torna-dashboard">← Torna alla Dashboard</button>
+    <div id="lista-celle"></div>
+</div>
+
+<!-- Foglio modale per inserire la temperatura di una cella -->
+<div class="overlay" id="overlay-temp-cella">
+    <div class="foglio-temp">
+        <h2 id="titolo-modale-cella">Temperatura</h2>
+        <div class="ora-corrente" id="ora-modale-cella">—</div>
+
+        <div class="selettore-temp">
+            <button id="btn-meno-cella">−</button>
+            <div class="valore"><span id="valore-temp-cella">-20</span><span class="unita">°C</span></div>
+            <button id="btn-piu-cella">+</button>
+        </div>
+
+        <div class="campo" style="text-align:left;">
+            <label for="input-note-cella">Note (facoltative)</label>
+            <input type="text" id="input-note-cella" placeholder="Es. sbrinamento in corso">
+        </div>
+
+        <button class="conferma" id="btn-conferma-temp-cella">✅ Conferma e salva</button>
+        <button class="annulla" id="btn-annulla-temp-cella">Annulla</button>
+    </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="dati-camion.js"></script>
+<script src="dati-celle.js"></script>
 <script src="admin.js"></script>
 </body>
 </html>

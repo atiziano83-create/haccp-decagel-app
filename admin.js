@@ -15,12 +15,20 @@ const PASSWORD_HASH = "893b1f8fc0fcc0587bb2f02fa8df1ca3039b9c8deae23935b6b3243e9
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+db.enablePersistence({ synchronizeTabs: true }).catch((errore) => {
+    console.warn("Persistenza offline non attivata:", errore.code);
+});
 
 // Accesso anonimo: le regole di sicurezza richiedono un utente
 // autenticato (anche solo in modo anonimo) per leggere i dati.
 const accessoAnonimoPronto = firebase.auth().signInAnonymously().catch((errore) => {
     console.error("Accesso anonimo non riuscito:", errore.code);
 });
+
+function oraCorrenteHHMM() {
+    const ora = new Date();
+    return `${String(ora.getHours()).padStart(2, "0")}:${String(ora.getMinutes()).padStart(2, "0")}`;
+}
 
 // ============================================================
 // REGOLA GIORNI LAVORATIVI: da lunedì a venerdì sempre, il sabato
@@ -199,6 +207,124 @@ async function caricaGiorniMancanti() {
         contenitore.innerHTML = '<div class="messaggio-ok">✅ Nessun giorno mancante negli ultimi 14 giorni lavorativi.</div>';
     }
 }
+
+// ============================================================
+// TEMPERATURE CELLE (mattina/pomeriggio)
+// ============================================================
+let cellaCorrente = null;
+let momentoCorrente = null; // "mattina" oppure "pomeriggio"
+let valoreTempCella = -20;
+
+document.getElementById("btn-celle").addEventListener("click", async () => {
+    mostraSchermo("schermo-celle");
+    document.getElementById("sottotitolo-data-celle").textContent = dataLeggibile(new Date());
+    await accessoAnonimoPronto;
+    caricaSituazioneCelle();
+});
+document.getElementById("btn-torna-dashboard").addEventListener("click", () => mostraSchermo("schermo-dashboard"));
+
+async function caricaSituazioneCelle() {
+    const contenitore = document.getElementById("lista-celle");
+    contenitore.innerHTML = "Caricamento…";
+    const oggiISO = dataISO(new Date());
+    let html = "";
+
+    for (const cella of CELLE) {
+        const idDoc = `${oggiISO}_${cella.id}`;
+        let dati = {};
+        try {
+            const snap = await db.collection("temp_celle").doc(idDoc).get();
+            dati = snap.exists ? snap.data() : {};
+        } catch (errore) {
+            console.error("Errore lettura cella", idDoc, errore);
+        }
+
+        html += `
+            <div class="card-identita">
+                <div class="info">
+                    <strong>${cella.nome}</strong>
+                    <span>${cella.localizzazione} · nominale ${cella.temp_nominale}°C</span>
+                </div>
+            </div>
+            <div class="azioni">
+                <div class="riquadro-azione partenza">
+                    <div class="titolo-riga"><span class="titolo">🌅 Mattina</span></div>
+                    <div class="esito ${dati.temp_mattina != null ? "" : "vuoto"}">${dati.temp_mattina != null ? `✅ ${dati.temp_mattina}°C alle ${dati.ora_mattina || "—"}` : "Non ancora registrata"}</div>
+                    <button class="grande btn-registra-cella" data-id-cella="${cella.id}" data-momento="mattina">${dati.temp_mattina != null ? "Modifica" : "Registra temperatura"}</button>
+                </div>
+                <div class="riquadro-azione fine">
+                    <div class="titolo-riga"><span class="titolo">🌇 Pomeriggio</span></div>
+                    <div class="esito ${dati.temp_pomeriggio != null ? "" : "vuoto"}">${dati.temp_pomeriggio != null ? `✅ ${dati.temp_pomeriggio}°C alle ${dati.ora_pomeriggio || "—"}` : "Non ancora registrata"}</div>
+                    <button class="grande btn-registra-cella" data-id-cella="${cella.id}" data-momento="pomeriggio">${dati.temp_pomeriggio != null ? "Modifica" : "Registra temperatura"}</button>
+                </div>
+            </div>
+        `;
+    }
+    contenitore.innerHTML = html;
+
+    contenitore.querySelectorAll(".btn-registra-cella").forEach((bottone) => {
+        bottone.addEventListener("click", () => {
+            apriModaleCella(bottone.dataset.idCella, bottone.dataset.momento);
+        });
+    });
+}
+
+function apriModaleCella(idCella, momento) {
+    cellaCorrente = CELLE.find((c) => c.id === idCella);
+    momentoCorrente = momento;
+    if (!cellaCorrente) return;
+
+    valoreTempCella = Math.round(cellaCorrente.temp_nominale);
+    document.getElementById("valore-temp-cella").textContent = valoreTempCella;
+    document.getElementById("titolo-modale-cella").textContent =
+        `${momento === "mattina" ? "🌅" : "🌇"} ${cellaCorrente.nome} — ${momento === "mattina" ? "Mattina" : "Pomeriggio"}`;
+    document.getElementById("ora-modale-cella").textContent = `Ora attuale: ${oraCorrenteHHMM()}`;
+    document.getElementById("input-note-cella").value = "";
+    document.getElementById("overlay-temp-cella").classList.add("attiva");
+}
+
+function chiudiModaleCella() {
+    document.getElementById("overlay-temp-cella").classList.remove("attiva");
+    cellaCorrente = null;
+    momentoCorrente = null;
+}
+
+document.getElementById("btn-meno-cella").addEventListener("click", () => {
+    valoreTempCella -= 1;
+    document.getElementById("valore-temp-cella").textContent = valoreTempCella;
+});
+document.getElementById("btn-piu-cella").addEventListener("click", () => {
+    valoreTempCella += 1;
+    document.getElementById("valore-temp-cella").textContent = valoreTempCella;
+});
+document.getElementById("btn-annulla-temp-cella").addEventListener("click", chiudiModaleCella);
+
+document.getElementById("btn-conferma-temp-cella").addEventListener("click", async () => {
+    if (!cellaCorrente || !momentoCorrente) return;
+
+    const oggiISO = dataISO(new Date());
+    const idDoc = `${oggiISO}_${cellaCorrente.id}`;
+    const campoTemp = momentoCorrente === "mattina" ? "temp_mattina" : "temp_pomeriggio";
+    const campoOra = momentoCorrente === "mattina" ? "ora_mattina" : "ora_pomeriggio";
+    const note = document.getElementById("input-note-cella").value.trim();
+
+    const dati = {
+        data: oggiISO,
+        id_cella: cellaCorrente.id,
+        nome_cella: cellaCorrente.nome,
+        [campoTemp]: valoreTempCella,
+        [campoOra]: oraCorrenteHHMM(),
+        aggiornato_il: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    if (note) dati.note = note;
+
+    // Il .set con merge:true funziona anche offline: la scrittura resta
+    // in coda in locale e parte da sola non appena torna la connessione.
+    db.collection("temp_celle").doc(idDoc).set(dati, { merge: true });
+
+    chiudiModaleCella();
+    caricaSituazioneCelle();
+});
 
 // ============================================================
 // AVVIO: se la sessione ha già superato il login in questa scheda,

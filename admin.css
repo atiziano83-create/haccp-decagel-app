@@ -1,5 +1,35 @@
 /* Stili aggiuntivi per la Dashboard Admin (oltre a style.css) */
 
+.nav-sezioni {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.bottone-nav {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    background: #2c3e50;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+}
+.bottone-nav:active { background: #1a252f; }
+
+#schermo-celle .bottone-secondario {
+    text-align: left;
+    padding: 0 0 16px 0;
+    margin: 0;
+}
+
+#lista-celle .card-identita {
+    margin-bottom: 12px;
+}
+#lista-celle .azioni {
+    margin-bottom: 28px;
+}
+
 .errore-login {
     color: #c0392b;
     font-size: 14px;
