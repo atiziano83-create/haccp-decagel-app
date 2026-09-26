@@ -23,6 +23,14 @@ db.enablePersistence({ synchronizeTabs: true }).catch((errore) => {
     console.warn("Persistenza offline non attivata:", errore.code);
 });
 
+// Accesso anonimo: identifica l'app presso Firebase senza chiedere
+// nulla all'autista. Serve perché le regole di sicurezza ora
+// richiedono che chi legge/scrive sia "autenticato" (anche solo in
+// modo anonimo), per bloccare accessi da fuori dall'app.
+firebase.auth().signInAnonymously().catch((errore) => {
+    console.error("Accesso anonimo non riuscito:", errore.code);
+});
+
 // ============================================================
 // STATO
 // ============================================================

@@ -16,6 +16,12 @@ const PASSWORD_HASH = "893b1f8fc0fcc0587bb2f02fa8df1ca3039b9c8deae23935b6b3243e9
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// Accesso anonimo: le regole di sicurezza richiedono un utente
+// autenticato (anche solo in modo anonimo) per leggere i dati.
+const accessoAnonimoPronto = firebase.auth().signInAnonymously().catch((errore) => {
+    console.error("Accesso anonimo non riuscito:", errore.code);
+});
+
 // ============================================================
 // REGOLA GIORNI LAVORATIVI: da lunedì a venerdì sempre, il sabato
 // solo nei mesi estivi. Modifica l'elenco qui sotto per cambiare
@@ -84,6 +90,7 @@ const AUTISTI = CAMION.filter((c) => c.autista);
 async function avviaDashboard() {
     mostraSchermo("schermo-dashboard");
     document.getElementById("sottotitolo-data").textContent = dataLeggibile(new Date());
+    await accessoAnonimoPronto;
     await Promise.all([caricaSituazioneOggi(), caricaGiorniMancanti()]);
 }
 
