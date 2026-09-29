@@ -86,6 +86,23 @@
     <div id="lista-storico-mese">Caricamento…</div>
 </div>
 
+<!-- Foglio modale per il PIN richiesto per cambiare identità -->
+<div class="overlay" id="overlay-pin-identita">
+    <div class="foglio-temp">
+        <h2>🔒 Cambio identità</h2>
+        <div class="ora-corrente">Solo l'amministratore può cambiare furgone/autista su questo telefono. Inserisci il PIN.</div>
+
+        <div class="campo" style="text-align:left;">
+            <label for="input-pin-identita">PIN</label>
+            <input type="password" id="input-pin-identita" inputmode="numeric" placeholder="****">
+        </div>
+        <div id="errore-pin-identita" class="errore-login" style="display:none;">PIN errato.</div>
+
+        <button class="conferma" id="btn-conferma-pin-identita">✅ Conferma</button>
+        <button class="annulla" id="btn-annulla-pin-identita">Annulla</button>
+    </div>
+</div>
+
 <!-- Foglio modale per inserire la temperatura -->
 <div class="overlay" id="overlay-temp">
     <div class="foglio-temp">

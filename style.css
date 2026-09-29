@@ -231,6 +231,13 @@ header.top .sottotitolo {
     margin-top: 10px;
 }
 
+.errore-login {
+    color: #c0392b;
+    font-size: 14px;
+    margin: -8px 0 14px 0;
+    text-align: center;
+}
+
 /* --- Storico del mese --- */
 .riga-storico {
     background: white;

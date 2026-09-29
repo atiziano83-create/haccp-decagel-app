@@ -179,7 +179,12 @@ document.getElementById("btn-conferma-setup").addEventListener("click", () => {
     avviaSchermoPrincipale();
 });
 
-document.getElementById("btn-cambia-identita").addEventListener("click", () => {
+// Cambiare l'identità del terminale richiede il PIN (vedi sezione
+// "PIN PROTEZIONE CAMBIO IDENTITÀ" più sotto): evita che gli autisti
+// cambino furgone/nome per sbaglio e compilino la scheda sbagliata.
+document.getElementById("btn-cambia-identita").addEventListener("click", apriModalePin);
+
+function apriModificaIdentita() {
     if (annullaAscolto) annullaAscolto();
 
     const nomeSalvato = localStorage.getItem("haccp_autista") || "";
@@ -196,7 +201,7 @@ document.getElementById("btn-cambia-identita").addEventListener("click", () => {
     }
     document.getElementById("input-camion").value = localStorage.getItem("haccp_targa") || "";
     mostraSchermo("schermo-setup");
-});
+}
 
 // ============================================================
 // SCHERMO PRINCIPALE
@@ -307,6 +312,42 @@ document.getElementById("btn-conferma-temp").addEventListener("click", () => {
     docOggiRef.set(dati, { merge: true });
 
     chiudiModaleTemp();
+});
+
+// ============================================================
+// PIN PROTEZIONE CAMBIO IDENTITÀ: impedisce che l'autista cambi per
+// sbaglio nome/furgone su un terminale già configurato (e compili
+// così la scheda sbagliata). Per cambiare il PIN, modifica solo la
+// riga qui sotto e ripubblica il sito: è un codice semplice,
+// pensato per evitare errori, non una vera protezione di sicurezza.
+// ============================================================
+const PIN_CAMBIO_IDENTITA = "2025";
+
+function apriModalePin() {
+    document.getElementById("input-pin-identita").value = "";
+    document.getElementById("errore-pin-identita").style.display = "none";
+    document.getElementById("overlay-pin-identita").classList.add("attiva");
+    setTimeout(() => document.getElementById("input-pin-identita").focus(), 100);
+}
+
+function chiudiModalePin() {
+    document.getElementById("overlay-pin-identita").classList.remove("attiva");
+}
+
+document.getElementById("btn-annulla-pin-identita").addEventListener("click", chiudiModalePin);
+
+document.getElementById("btn-conferma-pin-identita").addEventListener("click", () => {
+    const pinInserito = document.getElementById("input-pin-identita").value.trim();
+    if (pinInserito === PIN_CAMBIO_IDENTITA) {
+        chiudiModalePin();
+        apriModificaIdentita();
+    } else {
+        document.getElementById("errore-pin-identita").style.display = "block";
+    }
+});
+
+document.getElementById("input-pin-identita").addEventListener("keydown", (evento) => {
+    if (evento.key === "Enter") document.getElementById("btn-conferma-pin-identita").click();
 });
 
 // ============================================================
