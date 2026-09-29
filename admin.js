@@ -101,6 +101,12 @@ let CELLE = [];
 let AUTISTI = [];
 let anagraficaCaricata = false;
 
+// Un furgone/cella senza il campo "attivo" (dati creati prima di questa
+// funzione) si considera attivo di default.
+function eAttivo(elemento) {
+    return elemento.attivo !== false;
+}
+
 async function caricaAnagrafica(forza) {
     if (anagraficaCaricata && !forza) return;
     const [snapCamion, snapCelle] = await Promise.all([
@@ -109,7 +115,10 @@ async function caricaAnagrafica(forza) {
     ]);
     CAMION = snapCamion.docs.map((doc) => doc.data()).sort((a, b) => a.targa.localeCompare(b.targa));
     CELLE = snapCelle.docs.map((doc) => doc.data()).sort((a, b) => a.id.localeCompare(b.id));
-    AUTISTI = CAMION.filter((c) => c.autista);
+    // Solo i furgoni attualmente attivi entrano nei controlli giornalieri
+    // (situazione di oggi, giorni mancanti): un furgone fermo/fuori
+    // stagione non deve generare falsi allarmi.
+    AUTISTI = CAMION.filter((c) => c.autista && eAttivo(c));
     anagraficaCaricata = true;
 }
 
@@ -328,7 +337,7 @@ async function caricaSituazioneCelle() {
     const oggiISO = dataISO(new Date());
     let html = "";
 
-    for (const cella of CELLE) {
+    for (const cella of CELLE.filter(eAttivo)) {
         const idDoc = `${oggiISO}_${cella.id}`;
         let dati = {};
         try {
@@ -359,7 +368,7 @@ async function caricaSituazioneCelle() {
             </div>
         `;
     }
-    contenitore.innerHTML = html;
+    contenitore.innerHTML = html || '<div class="messaggio-ok">Nessuna cella attiva al momento (vedi Anagrafica).</div>';
 
     contenitore.querySelectorAll(".btn-registra-cella").forEach((bottone) => {
         bottone.addEventListener("click", () => {
@@ -741,6 +750,7 @@ function disegnaListaAnagrafica() {
                 <div class="info-camion">
                     <strong>${c.targa}${c.autista ? " — " + c.autista : ""}</strong>
                     <span>${c.modello || "—"}</span>
+                    ${eAttivo(c) ? "" : '<span class="badge-inattivo">⏸️ Non attivo</span>'}
                 </div>
                 <button class="bottone-secondario btn-modifica-furgone" data-targa="${c.targa}">Modifica</button>
             </div>
@@ -759,6 +769,7 @@ function disegnaListaAnagrafica() {
                 <div class="info-camion">
                     <strong>${c.nome} (${c.id})</strong>
                     <span>${c.localizzazione || "—"} · nominale ${c.temp_nominale}°C</span>
+                    ${eAttivo(c) ? "" : '<span class="badge-inattivo">⏸️ Non attiva</span>'}
                 </div>
                 <button class="bottone-secondario btn-modifica-cella-anagrafica" data-id-cella="${c.id}">Modifica</button>
             </div>
@@ -801,6 +812,7 @@ function apriModaleFurgone(targa) {
     document.getElementById("input-targa-furgone").disabled = !!furgone;
     document.getElementById("input-modello-furgone").value = furgone ? (furgone.modello || "") : "";
     document.getElementById("input-autista-furgone").value = furgone ? (furgone.autista || "") : "";
+    document.getElementById("input-attivo-furgone").checked = furgone ? eAttivo(furgone) : true;
     document.getElementById("btn-elimina-furgone").style.display = furgone ? "block" : "none";
 
     document.getElementById("overlay-furgone").classList.add("attiva");
@@ -819,10 +831,11 @@ document.getElementById("btn-conferma-furgone").addEventListener("click", async 
     const targa = document.getElementById("input-targa-furgone").value.trim().toUpperCase();
     const modello = document.getElementById("input-modello-furgone").value.trim();
     const autista = document.getElementById("input-autista-furgone").value.trim();
+    const attivo = document.getElementById("input-attivo-furgone").checked;
 
     if (!targa) { alert("Indica la targa."); return; }
 
-    await db.collection("anagrafica_camion").doc(targa).set({ targa, modello, autista });
+    await db.collection("anagrafica_camion").doc(targa).set({ targa, modello, autista, attivo });
     chiudiModaleFurgone();
     await ricaricaDopoModificaAnagrafica();
 });
@@ -848,6 +861,7 @@ function apriModaleCellaAnagrafica(idCella) {
     document.getElementById("input-nome-cella-anagrafica").value = cella ? cella.nome : "";
     document.getElementById("input-localizzazione-cella-anagrafica").value = cella ? (cella.localizzazione || "") : "";
     document.getElementById("input-temp-nominale-cella-anagrafica").value = cella ? cella.temp_nominale : "";
+    document.getElementById("input-attivo-cella-anagrafica").checked = cella ? eAttivo(cella) : true;
     document.getElementById("btn-elimina-cella-anagrafica").style.display = cella ? "block" : "none";
 
     document.getElementById("overlay-cella-anagrafica").classList.add("attiva");
@@ -871,9 +885,10 @@ document.getElementById("btn-conferma-cella-anagrafica").addEventListener("click
     if (!id) { alert("Indica il codice della cella."); return; }
     if (!nome) { alert("Indica il nome della cella."); return; }
     if (tempTesto === "") { alert("Indica la temperatura nominale."); return; }
+    const attivo = document.getElementById("input-attivo-cella-anagrafica").checked;
 
     await db.collection("anagrafica_celle").doc(id).set({
-        id, nome, localizzazione, temp_nominale: Number(tempTesto),
+        id, nome, localizzazione, temp_nominale: Number(tempTesto), attivo,
     });
     chiudiModaleCellaAnagrafica();
     await ricaricaDopoModificaAnagrafica();
@@ -993,7 +1008,14 @@ document.getElementById("btn-genera-report").addEventListener("click", async () 
     };
 
     let sezioniHtml = "";
-    if (serveTutto || tipoReport === "camion") sezioniHtml += sezioneTabellaCamion(camionFiltrati);
+    if (serveTutto || tipoReport === "camion") {
+        const furgoneInfo = targaScelta ? CAMION.find((c) => c.targa === targaScelta) : null;
+        if (tipoReport === "camion" && targaScelta && camionFiltrati.length === 0 && furgoneInfo && !eAttivo(furgoneInfo)) {
+            sezioniHtml += `<div class="report-sezione"><h3>🚚 Temperature Camion</h3><div class="nessun-dato">Furgone non attivo in questo periodo — nessuna registrazione prevista.</div></div>`;
+        } else {
+            sezioniHtml += sezioneTabellaCamion(camionFiltrati);
+        }
+    }
     if (serveTutto || tipoReport === "celle") sezioniHtml += sezioneTabellaCelle(celle);
     if (serveTutto || tipoReport === "ricevimento") sezioniHtml += sezioneTabellaRicevimenti(ricevimenti);
     if (serveTutto || tipoReport === "pulizie") sezioniHtml += sezioneTabellaPulizie(pulizie);

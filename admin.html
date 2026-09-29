@@ -294,6 +294,13 @@
             <label for="input-autista-furgone">Autista abituale (lascia vuoto se nessuno)</label>
             <input type="text" id="input-autista-furgone" placeholder="Es. Mario Rossi" autocomplete="name">
         </div>
+        <div class="campo campo-checkbox">
+            <label>
+                <input type="checkbox" id="input-attivo-furgone" checked>
+                Furgone attualmente in uso
+            </label>
+            <div class="nota-checkbox">Deseleziona se il furgone è fermo/fuori stagione: non comparirà più tra i "giorni mancanti" né tra quelli da controllare ogni giorno.</div>
+        </div>
 
         <button class="conferma" id="btn-conferma-furgone">✅ Salva</button>
         <button class="annulla" id="btn-elimina-furgone" style="display:none; color:#c0392b;">🗑️ Elimina furgone</button>
@@ -321,6 +328,13 @@
         <div class="campo" style="text-align:left;">
             <label for="input-temp-nominale-cella-anagrafica">Temperatura nominale (°C)</label>
             <input type="number" id="input-temp-nominale-cella-anagrafica" placeholder="Es. -25" step="1">
+        </div>
+        <div class="campo campo-checkbox">
+            <label>
+                <input type="checkbox" id="input-attivo-cella-anagrafica" checked>
+                Cella attualmente in uso
+            </label>
+            <div class="nota-checkbox">Deseleziona se la cella è spenta/non usata (es. bassa stagione): non comparirà più tra quelle da registrare ogni giorno né tra i "giorni mancanti".</div>
         </div>
 
         <button class="conferma" id="btn-conferma-cella-anagrafica">✅ Salva</button>
