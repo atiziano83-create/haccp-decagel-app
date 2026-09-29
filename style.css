@@ -230,3 +230,23 @@ header.top .sottotitolo {
     color: #7f8c8d;
     margin-top: 10px;
 }
+
+/* --- Storico del mese --- */
+.riga-storico {
+    background: white;
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.riga-storico strong {
+    font-size: 15px;
+    margin-bottom: 2px;
+}
+.riga-storico span {
+    font-size: 14px;
+    color: #34495e;
+}

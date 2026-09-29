@@ -310,6 +310,68 @@ document.getElementById("btn-conferma-temp").addEventListener("click", () => {
 });
 
 // ============================================================
+// STORICO DEL MESE (per eventuali controlli): mostra le
+// registrazioni del furgone in uso dall'inizio del mese corrente a
+// oggi. Non serve "svuotare" nulla: cambiando mese la vista mostra
+// automaticamente solo il mese nuovo (i dati vecchi restano comunque
+// salvati per i report dell'admin).
+// ============================================================
+function dataLeggibileBreve(dataISOStr) {
+    const [anno, mese, giorno] = dataISOStr.split("-");
+    return `${giorno}/${mese}/${anno}`;
+}
+
+function primoGiornoMeseCorrente() {
+    const oggi = new Date();
+    return `${oggi.getFullYear()}-${String(oggi.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+document.getElementById("btn-storico-mese").addEventListener("click", async () => {
+    mostraSchermo("schermo-storico");
+    const targa = localStorage.getItem("haccp_targa");
+    const camion = CAMION.find((c) => c.targa === targa);
+    const nomeMese = new Date().toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+    document.getElementById("sottotitolo-storico").textContent =
+        `${camion ? `${camion.targa} - ${camion.modello}` : targa} · ${nomeMese}`;
+    caricaStoricoMese(targa);
+});
+document.getElementById("btn-torna-principale-storico").addEventListener("click", () => mostraSchermo("schermo-principale"));
+
+async function caricaStoricoMese(targa) {
+    const contenitore = document.getElementById("lista-storico-mese");
+    contenitore.innerHTML = "Caricamento…";
+
+    let documenti = [];
+    try {
+        const snap = await db.collection("temp_camion")
+            .where("targa", "==", targa)
+            .where("data", ">=", primoGiornoMeseCorrente())
+            .where("data", "<=", dataOggiISO())
+            .get();
+        documenti = snap.docs.map((doc) => doc.data());
+    } catch (errore) {
+        console.error("Errore lettura storico del mese:", errore);
+        contenitore.innerHTML = '<div class="esito vuoto">Impossibile leggere lo storico (verifica la connessione).</div>';
+        return;
+    }
+
+    if (documenti.length === 0) {
+        contenitore.innerHTML = '<div class="esito vuoto">Nessuna registrazione ancora questo mese.</div>';
+        return;
+    }
+
+    documenti.sort((a, b) => a.data.localeCompare(b.data));
+
+    contenitore.innerHTML = documenti.map((r) => `
+        <div class="riga-storico">
+            <strong>${dataLeggibileBreve(r.data)}</strong>
+            <span>🌅 Partenza: ${r.temp_partenza != null ? `${r.temp_partenza}°C alle ${r.ora_partenza || "—"}` : "—"}</span>
+            <span>🌇 Fine: ${r.temp_fine != null ? `${r.temp_fine}°C alle ${r.ora_fine || "—"}` : "—"}</span>
+        </div>
+    `).join("");
+}
+
+// ============================================================
 // SERVICE WORKER (per far funzionare l'app anche offline)
 // ============================================================
 if ("serviceWorker" in navigator) {
