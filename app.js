@@ -12,7 +12,9 @@ const firebaseConfig = {
     appId: "1:585663608757:web:e92845b6f14078461a0bfc",
 };
 
-// (l'elenco CAMION ora vive in dati-camion.js, incluso prima di questo file)
+// (l'elenco furgoni/autisti ora vive su Firestore, collezione
+// "anagrafica_camion" — si gestisce dalla Dashboard Admin, sezione
+// "🗂️ Anagrafica", niente più file da modificare a mano)
 
 // ============================================================
 // INIZIALIZZAZIONE FIREBASE (con supporto offline)
@@ -96,9 +98,21 @@ window.addEventListener("offline", aggiornaBadgeConnessione);
 // ============================================================
 const VALORE_ALTRO = "__altro__";
 
-// Elenco autisti derivato direttamente da CAMION: così c'è un solo posto
-// (l'elenco CAMION più in alto) dove tenere aggiornati nomi e targhe.
-const AUTISTI = CAMION.filter((c) => c.autista).map((c) => ({ nome: c.autista, targa: c.targa }));
+// Furgoni e autisti, caricati da Firestore (anagrafica_camion) prima
+// di avviare l'app: vedi caricaAnagraficaCamion() più sotto.
+let CAMION = [];
+let AUTISTI = [];
+
+async function caricaAnagraficaCamion() {
+    try {
+        const snap = await db.collection("anagrafica_camion").get();
+        CAMION = snap.docs.map((doc) => doc.data()).sort((a, b) => a.targa.localeCompare(b.targa));
+    } catch (errore) {
+        console.error("Errore caricamento anagrafica camion:", errore);
+        CAMION = [];
+    }
+    AUTISTI = CAMION.filter((c) => c.autista).map((c) => ({ nome: c.autista, targa: c.targa }));
+}
 
 function popolaSelectCamion() {
     const select = document.getElementById("input-camion");
@@ -308,7 +322,8 @@ if ("serviceWorker" in navigator) {
 // AVVIO (chiamato da onAuthStateChanged qui sopra, una volta
 // confermato l'accesso anonimo)
 // ============================================================
-function avviaApp() {
+async function avviaApp() {
+    await caricaAnagraficaCamion();
     popolaSelectCamion();
     popolaSelectNome();
     aggiornaBadgeConnessione();

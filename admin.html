@@ -39,6 +39,9 @@
         <button id="btn-pulizie" class="bottone-nav">🧹 Pulizie</button>
         <button id="btn-report" class="bottone-nav">📑 Report</button>
     </div>
+    <div class="nav-sezioni">
+        <button id="btn-anagrafica" class="bottone-nav">🗂️ Anagrafica</button>
+    </div>
 
     <section class="blocco">
         <h2>Situazione di oggi</h2>
@@ -97,6 +100,27 @@
     </div>
 
     <div id="contenuto-report"></div>
+</div>
+
+<!-- SCHERMO ANAGRAFICA: furgoni/autisti e celle, gestiti dall'app -->
+<div id="schermo-anagrafica" class="schermo">
+    <header class="top">
+        <h1>🗂️ Anagrafica</h1>
+        <div class="sottotitolo">Furgoni, autisti e celle frigo</div>
+    </header>
+    <button class="bottone-secondario" id="btn-torna-dashboard-anagrafica">← Torna alla Dashboard</button>
+
+    <section class="blocco">
+        <h2>🚚 Furgoni e autisti</h2>
+        <div id="lista-furgoni-anagrafica" class="lista-camion">Caricamento…</div>
+        <button class="bottone-secondario" id="btn-aggiungi-furgone">+ Aggiungi furgone</button>
+    </section>
+
+    <section class="blocco">
+        <h2>🧊 Celle frigo</h2>
+        <div id="lista-celle-anagrafica" class="lista-camion">Caricamento…</div>
+        <button class="bottone-secondario" id="btn-aggiungi-cella">+ Aggiungi cella</button>
+    </section>
 </div>
 
 <!-- SCHERMO RICEVIMENTO MERCE -->
@@ -250,6 +274,58 @@
 
         <button class="conferma" id="btn-conferma-temp-cella">✅ Conferma e salva</button>
         <button class="annulla" id="btn-annulla-temp-cella">Annulla</button>
+    </div>
+</div>
+
+<!-- Foglio modale per aggiungere/modificare un furgone (Anagrafica) -->
+<div class="overlay" id="overlay-furgone">
+    <div class="foglio-temp">
+        <h2 id="titolo-modale-furgone">Furgone</h2>
+
+        <div class="campo" style="text-align:left;">
+            <label for="input-targa-furgone">Targa</label>
+            <input type="text" id="input-targa-furgone" placeholder="Es. AB123CD" style="text-transform:uppercase;">
+        </div>
+        <div class="campo" style="text-align:left;">
+            <label for="input-modello-furgone">Modello</label>
+            <input type="text" id="input-modello-furgone" placeholder="Es. Iveco Daily 35C15">
+        </div>
+        <div class="campo" style="text-align:left;">
+            <label for="input-autista-furgone">Autista abituale (lascia vuoto se nessuno)</label>
+            <input type="text" id="input-autista-furgone" placeholder="Es. Mario Rossi" autocomplete="name">
+        </div>
+
+        <button class="conferma" id="btn-conferma-furgone">✅ Salva</button>
+        <button class="annulla" id="btn-elimina-furgone" style="display:none; color:#c0392b;">🗑️ Elimina furgone</button>
+        <button class="annulla" id="btn-annulla-furgone">Annulla</button>
+    </div>
+</div>
+
+<!-- Foglio modale per aggiungere/modificare una cella (Anagrafica) -->
+<div class="overlay" id="overlay-cella-anagrafica">
+    <div class="foglio-temp">
+        <h2 id="titolo-modale-cella-anagrafica">Cella</h2>
+
+        <div class="campo" style="text-align:left;">
+            <label for="input-id-cella-anagrafica">Codice (es. CEL03)</label>
+            <input type="text" id="input-id-cella-anagrafica" placeholder="Es. CEL03" style="text-transform:uppercase;">
+        </div>
+        <div class="campo" style="text-align:left;">
+            <label for="input-nome-cella-anagrafica">Nome</label>
+            <input type="text" id="input-nome-cella-anagrafica" placeholder="Es. Cella Grande">
+        </div>
+        <div class="campo" style="text-align:left;">
+            <label for="input-localizzazione-cella-anagrafica">Localizzazione</label>
+            <input type="text" id="input-localizzazione-cella-anagrafica" placeholder="Es. Magazzino - Lato Nord">
+        </div>
+        <div class="campo" style="text-align:left;">
+            <label for="input-temp-nominale-cella-anagrafica">Temperatura nominale (°C)</label>
+            <input type="number" id="input-temp-nominale-cella-anagrafica" placeholder="Es. -25" step="1">
+        </div>
+
+        <button class="conferma" id="btn-conferma-cella-anagrafica">✅ Salva</button>
+        <button class="annulla" id="btn-elimina-cella-anagrafica" style="display:none; color:#c0392b;">🗑️ Elimina cella</button>
+        <button class="annulla" id="btn-annulla-cella-anagrafica">Annulla</button>
     </div>
 </div>
 

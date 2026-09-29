@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /temp_camion/{docId} {
+      // Solo chi si è "presentato" all'app (anche solo in modo anonimo)
+      // può leggere o scrivere. Blocca bot/estranei che non passano
+      // dall'app.
+      allow read: if request.auth != null;
+
+      // In scrittura controlliamo anche che il documento abbia la
+      // forma giusta, per evitare dati a caso o corrotti:
+      // - l'id del documento deve essere "AAAA-MM-GG_TARGA"
+      // - targa e data devono essere testo
+      // - le temperature, se presenti, devono essere numeri
+      allow create, update: if request.auth != null
+        && docId == request.resource.data.data + "_" + request.resource.data.targa
+        && request.resource.data.targa is string
+        && request.resource.data.data is string
+        && (!("temp_partenza" in request.resource.data) || request.resource.data.temp_partenza is number)
+        && (!("temp_fine" in request.resource.data) || request.resource.data.temp_fine is number);
+
+      // Nessuno può cancellare le registrazioni (dati HACCP da conservare).
+      allow delete: if false;
+    }
+
+    match /temp_celle/{docId} {
+      allow read: if request.auth != null;
+
+      // L'id del documento deve essere "AAAA-MM-GG_IDCELLA"; le
+      // temperature, se presenti, devono essere numeri.
+      allow create, update: if request.auth != null
+        && docId == request.resource.data.data + "_" + request.resource.data.id_cella
+        && request.resource.data.id_cella is string
+        && request.resource.data.data is string
+        && (!("temp_mattina" in request.resource.data) || request.resource.data.temp_mattina is number)
+        && (!("temp_pomeriggio" in request.resource.data) || request.resource.data.temp_pomeriggio is number)
+        && (!("note" in request.resource.data) || request.resource.data.note is string);
+
+      allow delete: if false;
+    }
+
+    match /ricevimento_merce/{docId} {
+      allow read: if request.auth != null;
+
+      // Registro di sola creazione: una volta salvato un ricevimento
+      // non si modifica né si cancella (tracciabilità HACCP).
+      allow create: if request.auth != null
+        && request.resource.data.data is string
+        && request.resource.data.fornitore is string
+        && request.resource.data.categoria is string
+        && request.resource.data.operatore is string
+        && request.resource.data.conformita in ["CONFORME", "NON_CONFORME"]
+        && (!("temp_automezzo" in request.resource.data) || request.resource.data.temp_automezzo is number);
+
+      allow update, delete: if false;
+    }
+
+    match /registro_pulizie/{docId} {
+      allow read: if request.auth != null;
+
+      // Registro di sola creazione, come il ricevimento merce.
+      allow create: if request.auth != null
+        && request.resource.data.data is string
+        && request.resource.data.area is string
+        && request.resource.data.frequenza is string
+        && request.resource.data.operatore is string
+        && request.resource.data.esito in ["Completato", "Non completato"];
+
+      allow update, delete: if false;
+    }
+
+    match /anagrafica_camion/{docId} {
+      // Elenco furgoni/autisti gestito dall'admin dalla sezione
+      // "Anagrafica". L'id del documento deve essere la targa stessa.
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && docId == request.resource.data.targa
+        && request.resource.data.targa is string
+        && request.resource.data.modello is string
+        && request.resource.data.autista is string;
+      allow delete: if request.auth != null;
+    }
+
+    match /anagrafica_celle/{docId} {
+      // Elenco celle frigo gestito dall'admin. L'id del documento deve
+      // essere il codice della cella stessa.
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && docId == request.resource.data.id
+        && request.resource.data.id is string
+        && request.resource.data.nome is string
+        && request.resource.data.localizzazione is string
+        && request.resource.data.temp_nominale is number;
+      allow delete: if request.auth != null;
+    }
+
+    // Tutto il resto del database resta bloccato di default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -91,14 +91,33 @@ async function eseguiLogin() {
 }
 
 // ============================================================
-// DASHBOARD
+// ANAGRAFICA (furgoni, autisti, celle) — caricata da Firestore.
+// CAMION_INIZIALE/CELLE_INIZIALE (dati-camion.js/dati-celle.js)
+// servono solo come elenco di partenza per la prima importazione,
+// vedi sezione "ANAGRAFICA" più sotto.
 // ============================================================
-const AUTISTI = CAMION.filter((c) => c.autista);
+let CAMION = [];
+let CELLE = [];
+let AUTISTI = [];
+let anagraficaCaricata = false;
+
+async function caricaAnagrafica(forza) {
+    if (anagraficaCaricata && !forza) return;
+    const [snapCamion, snapCelle] = await Promise.all([
+        db.collection("anagrafica_camion").get(),
+        db.collection("anagrafica_celle").get(),
+    ]);
+    CAMION = snapCamion.docs.map((doc) => doc.data()).sort((a, b) => a.targa.localeCompare(b.targa));
+    CELLE = snapCelle.docs.map((doc) => doc.data()).sort((a, b) => a.id.localeCompare(b.id));
+    AUTISTI = CAMION.filter((c) => c.autista);
+    anagraficaCaricata = true;
+}
 
 async function avviaDashboard() {
     mostraSchermo("schermo-dashboard");
     document.getElementById("sottotitolo-data").textContent = dataLeggibile(new Date());
     await accessoAnonimoPronto;
+    await caricaAnagrafica();
     await Promise.all([caricaSituazioneOggi(), caricaGiorniMancanti()]);
 }
 
@@ -692,6 +711,181 @@ async function caricaPulizieOggi() {
         `;
     }).join("");
 }
+
+// ============================================================
+// ANAGRAFICA: gestione furgoni/autisti e celle direttamente
+// dall'app, invece di modificare i file dati-camion.js/dati-celle.js
+// a mano. I dati vivono su Firestore (anagrafica_camion, doc id =
+// targa; anagrafica_celle, doc id = codice cella).
+// ============================================================
+document.getElementById("btn-anagrafica").addEventListener("click", async () => {
+    mostraSchermo("schermo-anagrafica");
+    await accessoAnonimoPronto;
+    await caricaAnagrafica(true);
+    disegnaListaAnagrafica();
+});
+document.getElementById("btn-torna-dashboard-anagrafica").addEventListener("click", () => mostraSchermo("schermo-dashboard"));
+
+function disegnaListaAnagrafica() {
+    const contFurgoni = document.getElementById("lista-furgoni-anagrafica");
+    if (CAMION.length === 0) {
+        contFurgoni.innerHTML = `
+            <div class="messaggio-ok" style="color:#9c640c;">Nessun furgone in elenco.</div>
+            <button class="bottone-secondario" id="btn-importa-predefiniti">📥 Importa elenco predefinito</button>
+        `;
+        const btnImporta = document.getElementById("btn-importa-predefiniti");
+        if (btnImporta) btnImporta.addEventListener("click", importaElencoPredefinito);
+    } else {
+        contFurgoni.innerHTML = CAMION.map((c) => `
+            <div class="riga-camion">
+                <div class="info-camion">
+                    <strong>${c.targa}${c.autista ? " — " + c.autista : ""}</strong>
+                    <span>${c.modello || "—"}</span>
+                </div>
+                <button class="bottone-secondario btn-modifica-furgone" data-targa="${c.targa}">Modifica</button>
+            </div>
+        `).join("");
+        contFurgoni.querySelectorAll(".btn-modifica-furgone").forEach((bottone) => {
+            bottone.addEventListener("click", () => apriModaleFurgone(bottone.dataset.targa));
+        });
+    }
+
+    const contCelle = document.getElementById("lista-celle-anagrafica");
+    if (CELLE.length === 0) {
+        contCelle.innerHTML = '<div class="messaggio-ok" style="color:#9c640c;">Nessuna cella in elenco.</div>';
+    } else {
+        contCelle.innerHTML = CELLE.map((c) => `
+            <div class="riga-camion">
+                <div class="info-camion">
+                    <strong>${c.nome} (${c.id})</strong>
+                    <span>${c.localizzazione || "—"} · nominale ${c.temp_nominale}°C</span>
+                </div>
+                <button class="bottone-secondario btn-modifica-cella-anagrafica" data-id-cella="${c.id}">Modifica</button>
+            </div>
+        `).join("");
+        contCelle.querySelectorAll(".btn-modifica-cella-anagrafica").forEach((bottone) => {
+            bottone.addEventListener("click", () => apriModaleCellaAnagrafica(bottone.dataset.idCella));
+        });
+    }
+}
+
+async function importaElencoPredefinito() {
+    const scritture = [
+        ...CAMION_INIZIALE.map((c) => db.collection("anagrafica_camion").doc(c.targa).set(c)),
+        ...CELLE_INIZIALE.map((c) => db.collection("anagrafica_celle").doc(c.id).set(c)),
+    ];
+    await Promise.all(scritture);
+    await ricaricaDopoModificaAnagrafica();
+}
+
+async function ricaricaDopoModificaAnagrafica() {
+    await caricaAnagrafica(true);
+    disegnaListaAnagrafica();
+    // I menu a tendina che dipendono da CAMION/CELLE si ripopolano da
+    // zero alla prossima apertura, così mostrano subito le modifiche.
+    ["input-camion-report", "input-area-pulizia"].forEach((idSelect) => {
+        const select = document.getElementById(idSelect);
+        if (select) delete select.dataset.popolato;
+    });
+}
+
+// --- Modale furgone (aggiungi/modifica/elimina) ---
+let targaFurgoneInModifica = null;
+
+function apriModaleFurgone(targa) {
+    targaFurgoneInModifica = targa || null;
+    const furgone = targa ? CAMION.find((c) => c.targa === targa) : null;
+
+    document.getElementById("titolo-modale-furgone").textContent = furgone ? "Modifica furgone" : "Nuovo furgone";
+    document.getElementById("input-targa-furgone").value = furgone ? furgone.targa : "";
+    document.getElementById("input-targa-furgone").disabled = !!furgone;
+    document.getElementById("input-modello-furgone").value = furgone ? (furgone.modello || "") : "";
+    document.getElementById("input-autista-furgone").value = furgone ? (furgone.autista || "") : "";
+    document.getElementById("btn-elimina-furgone").style.display = furgone ? "block" : "none";
+
+    document.getElementById("overlay-furgone").classList.add("attiva");
+}
+
+function chiudiModaleFurgone() {
+    document.getElementById("overlay-furgone").classList.remove("attiva");
+    document.getElementById("input-targa-furgone").disabled = false;
+    targaFurgoneInModifica = null;
+}
+
+document.getElementById("btn-aggiungi-furgone").addEventListener("click", () => apriModaleFurgone(null));
+document.getElementById("btn-annulla-furgone").addEventListener("click", chiudiModaleFurgone);
+
+document.getElementById("btn-conferma-furgone").addEventListener("click", async () => {
+    const targa = document.getElementById("input-targa-furgone").value.trim().toUpperCase();
+    const modello = document.getElementById("input-modello-furgone").value.trim();
+    const autista = document.getElementById("input-autista-furgone").value.trim();
+
+    if (!targa) { alert("Indica la targa."); return; }
+
+    await db.collection("anagrafica_camion").doc(targa).set({ targa, modello, autista });
+    chiudiModaleFurgone();
+    await ricaricaDopoModificaAnagrafica();
+});
+
+document.getElementById("btn-elimina-furgone").addEventListener("click", async () => {
+    if (!targaFurgoneInModifica) return;
+    if (!confirm(`Eliminare il furgone ${targaFurgoneInModifica} dall'anagrafica? (le temperature già registrate restano salvate)`)) return;
+    await db.collection("anagrafica_camion").doc(targaFurgoneInModifica).delete();
+    chiudiModaleFurgone();
+    await ricaricaDopoModificaAnagrafica();
+});
+
+// --- Modale cella (aggiungi/modifica/elimina) ---
+let idCellaInModifica = null;
+
+function apriModaleCellaAnagrafica(idCella) {
+    idCellaInModifica = idCella || null;
+    const cella = idCella ? CELLE.find((c) => c.id === idCella) : null;
+
+    document.getElementById("titolo-modale-cella-anagrafica").textContent = cella ? "Modifica cella" : "Nuova cella";
+    document.getElementById("input-id-cella-anagrafica").value = cella ? cella.id : "";
+    document.getElementById("input-id-cella-anagrafica").disabled = !!cella;
+    document.getElementById("input-nome-cella-anagrafica").value = cella ? cella.nome : "";
+    document.getElementById("input-localizzazione-cella-anagrafica").value = cella ? (cella.localizzazione || "") : "";
+    document.getElementById("input-temp-nominale-cella-anagrafica").value = cella ? cella.temp_nominale : "";
+    document.getElementById("btn-elimina-cella-anagrafica").style.display = cella ? "block" : "none";
+
+    document.getElementById("overlay-cella-anagrafica").classList.add("attiva");
+}
+
+function chiudiModaleCellaAnagrafica() {
+    document.getElementById("overlay-cella-anagrafica").classList.remove("attiva");
+    document.getElementById("input-id-cella-anagrafica").disabled = false;
+    idCellaInModifica = null;
+}
+
+document.getElementById("btn-aggiungi-cella").addEventListener("click", () => apriModaleCellaAnagrafica(null));
+document.getElementById("btn-annulla-cella-anagrafica").addEventListener("click", chiudiModaleCellaAnagrafica);
+
+document.getElementById("btn-conferma-cella-anagrafica").addEventListener("click", async () => {
+    const id = document.getElementById("input-id-cella-anagrafica").value.trim().toUpperCase();
+    const nome = document.getElementById("input-nome-cella-anagrafica").value.trim();
+    const localizzazione = document.getElementById("input-localizzazione-cella-anagrafica").value.trim();
+    const tempTesto = document.getElementById("input-temp-nominale-cella-anagrafica").value;
+
+    if (!id) { alert("Indica il codice della cella."); return; }
+    if (!nome) { alert("Indica il nome della cella."); return; }
+    if (tempTesto === "") { alert("Indica la temperatura nominale."); return; }
+
+    await db.collection("anagrafica_celle").doc(id).set({
+        id, nome, localizzazione, temp_nominale: Number(tempTesto),
+    });
+    chiudiModaleCellaAnagrafica();
+    await ricaricaDopoModificaAnagrafica();
+});
+
+document.getElementById("btn-elimina-cella-anagrafica").addEventListener("click", async () => {
+    if (!idCellaInModifica) return;
+    if (!confirm(`Eliminare la cella ${idCellaInModifica} dall'anagrafica? (le temperature già registrate restano salvate)`)) return;
+    await db.collection("anagrafica_celle").doc(idCellaInModifica).delete();
+    chiudiModaleCellaAnagrafica();
+    await ricaricaDopoModificaAnagrafica();
+});
 
 // ============================================================
 // AVVIO: se la sessione ha già superato il login in questa scheda,
