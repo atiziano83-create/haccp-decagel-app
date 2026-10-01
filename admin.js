@@ -260,11 +260,13 @@ let backfillTarga = null;
 let backfillGiorno = null;
 let backfillMomento = null; // "partenza" oppure "fine"
 let valoreTempBackfill = -18;
+let backfillAlSalvataggio = null; // funzione da richiamare dopo il salvataggio (per aggiornare dashboard o report)
 
-function apriModaleBackfillCamion(targa, giornoISO, momento) {
+function apriModaleBackfillCamion(targa, giornoISO, momento, alSalvataggio) {
     backfillTarga = targa;
     backfillGiorno = giornoISO;
     backfillMomento = momento;
+    backfillAlSalvataggio = alSalvataggio || caricaGiorniMancanti;
     valoreTempBackfill = -18;
 
     const camionInfo = CAMION.find((c) => c.targa === targa);
@@ -313,7 +315,73 @@ document.getElementById("btn-conferma-backfill").addEventListener("click", async
     await db.collection("temp_camion").doc(idDoc).set(dati, { merge: true });
 
     chiudiModaleBackfillCamion();
-    caricaGiorniMancanti();
+    if (backfillAlSalvataggio) backfillAlSalvataggio();
+});
+
+// ============================================================
+// INSERIMENTO A POSTERIORI (giorni mancanti) TEMP CELLE
+// ============================================================
+let backfillIdCella = null;
+let backfillGiornoCella = null;
+let backfillMomentoCella = null; // "mattina" oppure "pomeriggio"
+let valoreTempBackfillCella = -20;
+let backfillCellaAlSalvataggio = null;
+
+function apriModaleBackfillCella(idCella, giornoISO, momento, alSalvataggio) {
+    backfillIdCella = idCella;
+    backfillGiornoCella = giornoISO;
+    backfillMomentoCella = momento;
+    backfillCellaAlSalvataggio = alSalvataggio || null;
+
+    const cellaInfo = CELLE.find((c) => c.id === idCella);
+    valoreTempBackfillCella = cellaInfo ? Math.round(cellaInfo.temp_nominale) : -20;
+
+    document.getElementById("valore-temp-backfill-cella").textContent = valoreTempBackfillCella;
+    document.getElementById("titolo-modale-backfill-cella").textContent =
+        `${momento === "mattina" ? "🌅 Mattina" : "🌇 Pomeriggio"} — ${cellaInfo ? cellaInfo.nome : idCella}`;
+    document.getElementById("sottotitolo-modale-backfill-cella").textContent =
+        `${idCella} · ${dataLeggibile(new Date(giornoISO + "T00:00:00"))}`;
+    document.getElementById("overlay-backfill-cella").classList.add("attiva");
+}
+
+function chiudiModaleBackfillCella() {
+    document.getElementById("overlay-backfill-cella").classList.remove("attiva");
+    backfillIdCella = null;
+    backfillGiornoCella = null;
+    backfillMomentoCella = null;
+}
+
+document.getElementById("btn-meno-backfill-cella").addEventListener("click", () => {
+    valoreTempBackfillCella -= 1;
+    document.getElementById("valore-temp-backfill-cella").textContent = valoreTempBackfillCella;
+});
+document.getElementById("btn-piu-backfill-cella").addEventListener("click", () => {
+    valoreTempBackfillCella += 1;
+    document.getElementById("valore-temp-backfill-cella").textContent = valoreTempBackfillCella;
+});
+document.getElementById("btn-annulla-backfill-cella").addEventListener("click", chiudiModaleBackfillCella);
+
+document.getElementById("btn-conferma-backfill-cella").addEventListener("click", async () => {
+    if (!backfillIdCella || !backfillGiornoCella || !backfillMomentoCella) return;
+
+    const cellaInfo = CELLE.find((c) => c.id === backfillIdCella);
+    const campoTemp = backfillMomentoCella === "mattina" ? "temp_mattina" : "temp_pomeriggio";
+    const campoOra = backfillMomentoCella === "mattina" ? "ora_mattina" : "ora_pomeriggio";
+    const idDoc = `${backfillGiornoCella}_${backfillIdCella}`;
+
+    const dati = {
+        data: backfillGiornoCella,
+        id_cella: backfillIdCella,
+        nome_cella: cellaInfo ? cellaInfo.nome : "",
+        [campoTemp]: valoreTempBackfillCella,
+        [campoOra]: `${oraCorrenteHHMM()} (inserito da admin)`,
+        aggiornato_il: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await db.collection("temp_celle").doc(idDoc).set(dati, { merge: true });
+
+    chiudiModaleBackfillCella();
+    if (backfillCellaAlSalvataggio) backfillCellaAlSalvataggio();
 });
 
 // ============================================================
@@ -930,6 +998,75 @@ function primoEUltimoGiornoMese(annoMeseStr) {
     return { primo, ultimo };
 }
 
+// Elenco dei giorni lavorativi tra primoISO e ultimoISO (inclusi), senza
+// mai superare ieri: il giorno di oggi non è ancora finito, quindi non
+// ha senso segnalarlo come "mancante". Usa la stessa regola sabato/
+// domenica di giornoLavorativo() (niente sabato/domenica fuori dai mesi
+// estivi, mai la domenica).
+function giorniLavorativiNelPeriodo(primoISO, ultimoISO) {
+    const oggi = new Date();
+    oggi.setHours(0, 0, 0, 0);
+    const ieri = new Date(oggi);
+    ieri.setDate(ieri.getDate() - 1);
+
+    const primo = new Date(primoISO + "T00:00:00");
+    const ultimoRichiesto = new Date(ultimoISO + "T00:00:00");
+    const ultimo = ultimoRichiesto < ieri ? ultimoRichiesto : ieri;
+
+    const giorni = [];
+    for (let d = new Date(primo); d <= ultimo; d.setDate(d.getDate() + 1)) {
+        if (giornoLavorativo(d)) giorni.push(dataISO(d));
+    }
+    return giorni;
+}
+
+function calcolaGiorniMancantiCamion(targa, primo, ultimo, righeGruppo) {
+    const mappa = {};
+    righeGruppo.forEach((r) => { mappa[r.data] = r; });
+    return giorniLavorativiNelPeriodo(primo, ultimo)
+        .map((giornoISO) => {
+            const r = mappa[giornoISO];
+            const mancaPartenza = !r || r.temp_partenza === undefined || r.temp_partenza === null;
+            const mancaFine = !r || r.temp_fine === undefined || r.temp_fine === null;
+            return (mancaPartenza || mancaFine) ? { giornoISO, mancaPartenza, mancaFine } : null;
+        })
+        .filter(Boolean);
+}
+
+function calcolaGiorniMancantiCella(idCella, primo, ultimo, righeGruppo) {
+    const mappa = {};
+    righeGruppo.forEach((r) => { mappa[r.data] = r; });
+    return giorniLavorativiNelPeriodo(primo, ultimo)
+        .map((giornoISO) => {
+            const r = mappa[giornoISO];
+            const mancaMattina = !r || r.temp_mattina === undefined || r.temp_mattina === null;
+            const mancaPomeriggio = !r || r.temp_pomeriggio === undefined || r.temp_pomeriggio === null;
+            return (mancaMattina || mancaPomeriggio) ? { giornoISO, mancaMattina, mancaPomeriggio } : null;
+        })
+        .filter(Boolean);
+}
+
+// Riga HTML con l'elenco dei giorni mancanti e un pulsante per
+// inserirli subito (riusa le stesse modali di backfill della
+// dashboard). I pulsanti hanno classe "no-stampa": compaiono a
+// schermo ma non nella versione stampata/PDF del report.
+function blocoGiorniMancantiReport(mancanti, tipo, chiave) {
+    if (mancanti.length === 0) return "";
+    const righe = mancanti.map((m) => {
+        const dataLeg = dataLeggibileBreve(m.giornoISO);
+        const bottoni = [];
+        if (tipo === "camion") {
+            if (m.mancaPartenza) bottoni.push(`<button class="btn-inserisci-mancante no-stampa" data-tipo="camion" data-chiave="${chiave}" data-giorno="${m.giornoISO}" data-momento="partenza">🌅 Inserisci partenza</button>`);
+            if (m.mancaFine) bottoni.push(`<button class="btn-inserisci-mancante no-stampa" data-tipo="camion" data-chiave="${chiave}" data-giorno="${m.giornoISO}" data-momento="fine">🌇 Inserisci fine</button>`);
+        } else {
+            if (m.mancaMattina) bottoni.push(`<button class="btn-inserisci-mancante no-stampa" data-tipo="cella" data-chiave="${chiave}" data-giorno="${m.giornoISO}" data-momento="mattina">🌅 Inserisci mattina</button>`);
+            if (m.mancaPomeriggio) bottoni.push(`<button class="btn-inserisci-mancante no-stampa" data-tipo="cella" data-chiave="${chiave}" data-giorno="${m.giornoISO}" data-momento="pomeriggio">🌇 Inserisci pomeriggio</button>`);
+        }
+        return `<li>⚠️ ${dataLeg} — nessuna registrazione<div class="azioni-giorno-mancante">${bottoni.join("")}</div></li>`;
+    }).join("");
+    return `<div class="blocco-giorni-mancanti-report"><ul>${righe}</ul></div>`;
+}
+
 document.getElementById("btn-report").addEventListener("click", () => {
     mostraSchermo("schermo-report");
     // Precompila con il mese corrente
@@ -967,7 +1104,9 @@ function popolaSelectCamionReport() {
     select.dataset.popolato = "1";
 }
 
-document.getElementById("btn-genera-report").addEventListener("click", async () => {
+document.getElementById("btn-genera-report").addEventListener("click", generaReportMensile);
+
+async function generaReportMensile() {
     const meseScelto = document.getElementById("input-mese-report").value;
     if (!meseScelto) { alert("Scegli un mese."); return; }
     const tipoReport = document.getElementById("input-tipo-report").value;
@@ -978,6 +1117,7 @@ document.getElementById("btn-genera-report").addEventListener("click", async () 
     document.getElementById("btn-stampa-report").style.display = "none";
 
     await accessoAnonimoPronto;
+    await caricaAnagrafica(); // assicura CAMION/CELLE già pronti (serve ai giorni mancanti)
     const { primo, ultimo } = primoEUltimoGiornoMese(meseScelto);
 
     // Scarica solo le collezioni che servono davvero per il tipo scelto.
@@ -1007,16 +1147,11 @@ document.getElementById("btn-genera-report").addEventListener("click", async () 
         pulizie: "Registro Pulizie",
     };
 
+    const soloTargaFiltro = (tipoReport === "camion" && targaScelta) ? targaScelta : null;
+
     let sezioniHtml = "";
-    if (serveTutto || tipoReport === "camion") {
-        const furgoneInfo = targaScelta ? CAMION.find((c) => c.targa === targaScelta) : null;
-        if (tipoReport === "camion" && targaScelta && camionFiltrati.length === 0 && furgoneInfo && !eAttivo(furgoneInfo)) {
-            sezioniHtml += `<div class="report-sezione"><h3>🚚 Temperature Camion</h3><div class="nessun-dato">Furgone non attivo in questo periodo — nessuna registrazione prevista.</div></div>`;
-        } else {
-            sezioniHtml += sezioneTabellaCamion(camionFiltrati);
-        }
-    }
-    if (serveTutto || tipoReport === "celle") sezioniHtml += sezioneTabellaCelle(celle);
+    if (serveTutto || tipoReport === "camion") sezioniHtml += sezioneTabellaCamion(camionFiltrati, primo, ultimo, soloTargaFiltro);
+    if (serveTutto || tipoReport === "celle") sezioniHtml += sezioneTabellaCelle(celle, primo, ultimo);
     if (serveTutto || tipoReport === "ricevimento") sezioniHtml += sezioneTabellaRicevimenti(ricevimenti);
     if (serveTutto || tipoReport === "pulizie") sezioniHtml += sezioneTabellaPulizie(pulizie);
 
@@ -1037,7 +1172,21 @@ document.getElementById("btn-genera-report").addEventListener("click", async () 
     `;
 
     document.getElementById("btn-stampa-report").style.display = "block";
-});
+
+    // Pulsanti "Inserisci" sui giorni mancanti: riaprono le stesse
+    // modali di backfill della dashboard e, una volta salvato,
+    // rigenerano il report per far sparire subito il giorno sistemato.
+    contenitore.querySelectorAll(".btn-inserisci-mancante[data-tipo]").forEach((bottone) => {
+        bottone.addEventListener("click", () => {
+            const { tipo, chiave, giorno, momento } = bottone.dataset;
+            if (tipo === "camion") {
+                apriModaleBackfillCamion(chiave, giorno, momento, generaReportMensile);
+            } else {
+                apriModaleBackfillCella(chiave, giorno, momento, generaReportMensile);
+            }
+        });
+    });
+}
 
 async function recuperaIntervallo(collezione, primo, ultimo) {
     try {
@@ -1052,72 +1201,112 @@ async function recuperaIntervallo(collezione, primo, ultimo) {
     }
 }
 
-function sezioneTabellaCamion(righe) {
-    if (righe.length === 0) {
-        return `<div class="report-sezione"><h3>🚚 Temperature Camion</h3><div class="nessun-dato">Nessun dato nel mese selezionato.</div></div>`;
+function sezioneTabellaCamion(righe, primo, ultimo, soloTarga) {
+    // Senza un furgone specifico selezionato, mostra tutti i furgoni
+    // attivi (anche quelli senza nessuna registrazione nel periodo, così
+    // i loro giorni mancanti restano visibili). Con un furgone specifico
+    // selezionato, mostra solo quello, anche se non più attivo.
+    const furgoniDaMostrare = soloTarga
+        ? CAMION.filter((c) => c.targa === soloTarga)
+        : CAMION.filter(eAttivo);
+
+    if (furgoniDaMostrare.length === 0) {
+        return `<div class="report-sezione"><h3>🚚 Temperature Camion</h3><div class="nessun-dato">Nessun furgone da mostrare.</div></div>`;
     }
 
-    // Raggruppa per targa, così ogni furgone mostra chiaramente il
-    // proprio operatore/targa invece di ripeterli su ogni riga.
     const gruppi = {};
     righe.forEach((r) => {
         if (!gruppi[r.targa]) gruppi[r.targa] = [];
         gruppi[r.targa].push(r);
     });
 
-    const sottotabelle = Object.keys(gruppi).sort().map((targa) => {
-        const righeGruppo = gruppi[targa];
-        const camionInfo = CAMION.find((c) => c.targa === targa);
-        const nomiAutisti = [...new Set(righeGruppo.map((r) => r.autista).filter(Boolean))].join(", ");
-        const corpo = righeGruppo.map((r) => `
-            <tr>
-                <td>${dataLeggibileBreve(r.data)}</td>
-                <td class="centro">${r.temp_partenza != null ? `${r.temp_partenza}°C alle ${r.ora_partenza || "—"}` : "—"}</td>
-                <td class="centro">${r.temp_fine != null ? `${r.temp_fine}°C alle ${r.ora_fine || "—"}` : "—"}</td>
-            </tr>
-        `).join("");
+    const sottotabelle = furgoniDaMostrare.map((camionInfo) => {
+        const targa = camionInfo.targa;
+        const righeGruppo = gruppi[targa] || [];
+        const attivo = eAttivo(camionInfo);
+        const mancanti = attivo ? calcolaGiorniMancantiCamion(targa, primo, ultimo, righeGruppo) : [];
+        const titolo = `🚚 Targa ${targa}${camionInfo.modello ? ` — ${camionInfo.modello}` : ""}`;
+
+        if (righeGruppo.length === 0 && mancanti.length === 0) {
+            const messaggio = attivo
+                ? "Nessun dato nel periodo selezionato."
+                : "Furgone non attivo in questo periodo — nessuna registrazione prevista.";
+            return `<div class="sotto-tabella-titolo">${titolo}</div><div class="nessun-dato">${messaggio}</div>`;
+        }
+
+        const nomiAutisti = [...new Set(righeGruppo.map((r) => r.autista).filter(Boolean))].join(", ") || camionInfo.autista || "—";
+        let tabella = "";
+        if (righeGruppo.length > 0) {
+            const corpo = righeGruppo.map((r) => `
+                <tr>
+                    <td>${dataLeggibileBreve(r.data)}</td>
+                    <td class="centro">${r.temp_partenza != null ? `${r.temp_partenza}°C alle ${r.ora_partenza || "—"}` : "—"}</td>
+                    <td class="centro">${r.temp_fine != null ? `${r.temp_fine}°C alle ${r.ora_fine || "—"}` : "—"}</td>
+                </tr>
+            `).join("");
+            tabella = `
+                <table class="tabella-report">
+                    <thead><tr><th>Data</th><th>Partenza</th><th>Fine</th></tr></thead>
+                    <tbody>${corpo}</tbody>
+                </table>
+            `;
+        }
+
         return `
-            <div class="sotto-tabella-titolo">🚚 Targa ${targa}${camionInfo ? ` — ${camionInfo.modello}` : ""} · Operatore: ${nomiAutisti || "—"}</div>
-            <table class="tabella-report">
-                <thead><tr><th>Data</th><th>Partenza</th><th>Fine</th></tr></thead>
-                <tbody>${corpo}</tbody>
-            </table>
+            <div class="sotto-tabella-titolo">${titolo} · Operatore: ${nomiAutisti}</div>
+            ${tabella}
+            ${blocoGiorniMancantiReport(mancanti, "camion", targa)}
         `;
     }).join("");
 
     return `<div class="report-sezione"><h3>🚚 Temperature Camion</h3>${sottotabelle}</div>`;
 }
 
-function sezioneTabellaCelle(righe) {
-    if (righe.length === 0) {
-        return `<div class="report-sezione"><h3>🧊 Temperature Celle</h3><div class="nessun-dato">Nessun dato nel mese selezionato.</div></div>`;
+function sezioneTabellaCelle(righe, primo, ultimo) {
+    const celleDaMostrare = CELLE.filter(eAttivo);
+
+    if (celleDaMostrare.length === 0) {
+        return `<div class="report-sezione"><h3>🧊 Temperature Celle</h3><div class="nessun-dato">Nessuna cella attiva al momento.</div></div>`;
     }
 
-    // Raggruppa per cella, con l'ID e il nome ben visibili.
     const gruppi = {};
     righe.forEach((r) => {
         if (!gruppi[r.id_cella]) gruppi[r.id_cella] = [];
         gruppi[r.id_cella].push(r);
     });
 
-    const sottotabelle = Object.keys(gruppi).sort().map((idCella) => {
-        const righeGruppo = gruppi[idCella];
-        const cellaInfo = CELLE.find((c) => c.id === idCella);
-        const nomeCella = cellaInfo ? cellaInfo.nome : (righeGruppo[0].nome_cella || idCella);
-        const corpo = righeGruppo.map((r) => `
-            <tr>
-                <td>${dataLeggibileBreve(r.data)}</td>
-                <td class="centro">${r.temp_mattina != null ? `${r.temp_mattina}°C alle ${r.ora_mattina || "—"}` : "—"}</td>
-                <td class="centro">${r.temp_pomeriggio != null ? `${r.temp_pomeriggio}°C alle ${r.ora_pomeriggio || "—"}` : "—"}</td>
-                <td>${r.note || "—"}</td>
-            </tr>
-        `).join("");
+    const sottotabelle = celleDaMostrare.map((cellaInfo) => {
+        const idCella = cellaInfo.id;
+        const righeGruppo = gruppi[idCella] || [];
+        const mancanti = calcolaGiorniMancantiCella(idCella, primo, ultimo, righeGruppo);
+        const titolo = `🧊 ${cellaInfo.nome} (${idCella})`;
+
+        if (righeGruppo.length === 0 && mancanti.length === 0) {
+            return `<div class="sotto-tabella-titolo">${titolo}</div><div class="nessun-dato">Nessun dato nel periodo selezionato.</div>`;
+        }
+
+        let tabella = "";
+        if (righeGruppo.length > 0) {
+            const corpo = righeGruppo.map((r) => `
+                <tr>
+                    <td>${dataLeggibileBreve(r.data)}</td>
+                    <td class="centro">${r.temp_mattina != null ? `${r.temp_mattina}°C alle ${r.ora_mattina || "—"}` : "—"}</td>
+                    <td class="centro">${r.temp_pomeriggio != null ? `${r.temp_pomeriggio}°C alle ${r.ora_pomeriggio || "—"}` : "—"}</td>
+                    <td>${r.note || "—"}</td>
+                </tr>
+            `).join("");
+            tabella = `
+                <table class="tabella-report">
+                    <thead><tr><th>Data</th><th>Mattina</th><th>Pomeriggio</th><th>Note</th></tr></thead>
+                    <tbody>${corpo}</tbody>
+                </table>
+            `;
+        }
+
         return `
-            <div class="sotto-tabella-titolo">🧊 ${nomeCella} (${idCella})</div>
-            <table class="tabella-report">
-                <thead><tr><th>Data</th><th>Mattina</th><th>Pomeriggio</th><th>Note</th></tr></thead>
-                <tbody>${corpo}</tbody>
-            </table>
+            <div class="sotto-tabella-titolo">${titolo}</div>
+            ${tabella}
+            ${blocoGiorniMancantiReport(mancanti, "cella", idCella)}
         `;
     }).join("");
 
