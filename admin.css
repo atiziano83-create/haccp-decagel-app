@@ -178,8 +178,17 @@ table.tabella-report td.centro { text-align: center; }
     .no-stampa { display: none !important; }
     body { background: white; }
     .schermo { padding: 0; }
-    .report-sezione { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+    /* Niente "break-inside: avoid" sull'intera sezione: con molti
+       furgoni/celle o tanti giorni mancanti il blocco diventa più alto
+       di una pagina e il browser lo spinge quasi tutto sulla pagina
+       dopo, lasciando grandi vuoti. Meglio lasciarlo scorrere
+       naturalmente e impedire solo che un titolo resti isolato in
+       fondo pagina, staccato dalla sua tabella/elenco. */
+    .report-sezione { box-shadow: none; border: 1px solid #ccc; }
+    .sotto-tabella-titolo { break-after: avoid; }
+    .blocco-giorni-mancanti-report li { break-inside: avoid; }
     table.tabella-report { font-size: 11px; }
+    table.tabella-report tr { break-inside: avoid; }
 }
 
 .campo-checkbox label {
