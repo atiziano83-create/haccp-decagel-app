@@ -1,7 +1,7 @@
 // Nome della cache: cambialo (es. "haccp-v2") ogni volta che aggiorni
 // i file dell'app, così i telefoni scaricano la versione nuova invece
 // di continuare a usare quella salvata.
-const NOME_CACHE = "haccp-v19";
+const NOME_CACHE = "haccp-v20";
 
 const FILE_DA_SALVARE = [
     "./",
@@ -17,7 +17,9 @@ const FILE_DA_SALVARE = [
     "./admin.css",
     "./admin.js",
     "./manifest.json",
-    "./manifest-admin.json",
+    "./admin/",
+    "./admin/index.html",
+    "./admin/manifest.json",
     "./icons/icon-192.png",
     "./icons/icon-512.png",
     "./icons/icon-admin-192.png",

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>HACCP - Dashboard Admin</title>
+<meta name="theme-color" content="#1e8449">
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="../icons/icon-admin-192.png">
+<link rel="icon" href="../icons/icon-admin-192.png">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="../admin.css">
+</head>
+<body>
+
+<!-- SCHERMO LOGIN -->
+<div id="schermo-login" class="schermo attiva">
+    <header class="top">
+        <h1>🔒 Dashboard Admin</h1>
+        <div class="sottotitolo">HACCP DE.CA.GEL.</div>
+    </header>
+    <div class="campo">
+        <label for="input-password">Password</label>
+        <input type="password" id="input-password" placeholder="Inserisci password" autocomplete="current-password">
+    </div>
+    <div id="errore-login" class="errore-login" style="display:none;">Password errata, riprova.</div>
+    <button class="bottone-grande" id="btn-login">Entra</button>
+</div>
+
+<!-- SCHERMO DASHBOARD -->
+<div id="schermo-dashboard" class="schermo">
+    <header class="top">
+        <h1>📊 Dashboard Admin</h1>
+        <div class="sottotitolo" id="sottotitolo-data">—</div>
+    </header>
+
+    <div class="nav-sezioni">
+        <button id="btn-celle" class="bottone-nav">🧊 Temp Celle</button>
+        <button id="btn-ricevimento" class="bottone-nav">📦 Ricevimento Merce</button>
+        <button id="btn-pulizie" class="bottone-nav">🧹 Pulizie</button>
+        <button id="btn-report" class="bottone-nav">📑 Report</button>
+    </div>
+    <div class="nav-sezioni">
+        <button id="btn-anagrafica" class="bottone-nav">🗂️ Anagrafica</button>
+    </div>
+
+    <section class="blocco">
+        <h2>Situazione di oggi</h2>
+        <div id="lista-oggi" class="lista-camion">Caricamento…</div>
+    </section>
+
+    <section class="blocco">
+        <h2>⚠️ Giorni mancanti (ultime 2 settimane)</h2>
+        <div class="sottotitolo-blocco">Conteggio dal lunedì al venerdì (anche il sabato nei mesi estivi)</div>
+        <div id="lista-mancanti" class="lista-mancanti">Verifica in corso…</div>
+    </section>
+</div>
+
+<!-- SCHERMO CELLE: temperature celle frigo fisse (mattina/pomeriggio) -->
+<div id="schermo-celle" class="schermo">
+    <header class="top">
+        <h1>🧊 Temperature Celle</h1>
+        <div class="sottotitolo" id="sottotitolo-data-celle">—</div>
+    </header>
+    <button class="bottone-secondario" id="btn-torna-dashboard">← Torna alla Dashboard</button>
+    <div id="lista-celle"></div>
+</div>
+
+<!-- SCHERMO REPORT MENSILE -->
+<div id="schermo-report" class="schermo">
+    <header class="top no-stampa">
+        <h1>📑 Report Mensile</h1>
+        <div class="sottotitolo">Da mostrare o stampare in caso di controlli</div>
+    </header>
+    <button class="bottone-secondario no-stampa" id="btn-torna-dashboard-report">← Torna alla Dashboard</button>
+
+    <div class="blocco no-stampa">
+        <div class="campo">
+            <label for="input-mese-report">Mese da esportare</label>
+            <input type="month" id="input-mese-report">
+        </div>
+
+        <div class="campo">
+            <label for="input-tipo-report">Cosa includere</label>
+            <select id="input-tipo-report">
+                <option value="tutto">Report completo (tutte le sezioni)</option>
+                <option value="camion">Solo Temperature Camion</option>
+                <option value="celle">Solo Temperature Celle</option>
+                <option value="ricevimento">Solo Ricevimento Merce</option>
+                <option value="pulizie">Solo Registro Pulizie</option>
+            </select>
+        </div>
+
+        <div class="campo" id="campo-camion-report" style="display:none;">
+            <label for="input-camion-report">Furgone</label>
+            <select id="input-camion-report"></select>
+        </div>
+
+        <button class="bottone-grande" id="btn-genera-report">Genera report</button>
+        <button class="bottone-secondario" id="btn-stampa-report" style="display:none;">🖨️ Stampa / Salva PDF</button>
+    </div>
+
+    <div id="contenuto-report"></div>
+</div>
+
+<!-- SCHERMO ANAGRAFICA: furgoni/autisti e celle, gestiti dall'app -->
+<div id="schermo-anagrafica" class="schermo">
+    <header class="top">
+        <h1>🗂️ Anagrafica</h1>
+        <div class="sottotitolo">Furgoni, autisti e celle frigo</div>
+    </header>
+    <button class="bottone-secondario" id="btn-torna-dashboard-anagrafica">← Torna alla Dashboard</button>
+
+    <section class="blocco">
+        <h2>🚚 Furgoni e autisti</h2>
+        <div id="lista-furgoni-anagrafica" class="lista-camion">Caricamento…</div>
+        <button class="bottone-secondario" id="btn-aggiungi-furgone">+ Aggiungi furgone</button>
+    </section>
+
+    <section class="blocco">
+        <h2>🧊 Celle frigo</h2>
+        <div id="lista-celle-anagrafica" class="lista-camion">Caricamento…</div>
+        <button class="bottone-secondario" id="btn-aggiungi-cella">+ Aggiungi cella</button>
+    </section>
+</div>
+
+<!-- SCHERMO RICEVIMENTO MERCE -->
+<div id="schermo-ricevimento" class="schermo">
+    <header class="top">
+        <h1>📦 Ricevimento Merce</h1>
+        <div class="sottotitolo" id="sottotitolo-data-ricevimento">—</div>
+    </header>
+    <button class="bottone-secondario" id="btn-torna-dashboard-ricevimento">← Torna alla Dashboard</button>
+
+    <div class="blocco">
+        <h2>Nuovo ricevimento</h2>
+
+        <div class="campo">
+            <label for="input-fornitore">Fornitore</label>
+            <select id="input-fornitore"></select>
+        </div>
+        <div class="campo" id="campo-fornitore-altro" style="display:none;">
+            <label for="input-fornitore-altro">Scrivi il fornitore</label>
+            <input type="text" id="input-fornitore-altro" placeholder="Nome fornitore">
+        </div>
+
+        <div class="campo">
+            <label for="input-categoria">Categoria prodotto</label>
+            <select id="input-categoria">
+                <option value="Surgelato">Surgelato</option>
+                <option value="Fresco">Fresco</option>
+                <option value="Secco">Secco</option>
+                <option value="Altro">Altro</option>
+            </select>
+        </div>
+
+        <div class="campo">
+            <label for="input-num-doc">Numero documento (DDT)</label>
+            <input type="text" id="input-num-doc" placeholder="Es. 1837" inputmode="text">
+        </div>
+
+        <div class="campo">
+            <label for="input-temp-automezzo">Temperatura automezzo del fornitore (°C, facoltativa)</label>
+            <input type="number" id="input-temp-automezzo" placeholder="Es. -20" step="1">
+        </div>
+
+        <div class="campo">
+            <label>Conformità</label>
+            <div class="toggle-conformita">
+                <button type="button" class="btn-conformita conforme" id="btn-conforme">✅ Conforme</button>
+                <button type="button" class="btn-conformita non-conforme" id="btn-non-conforme">⚠️ Non conforme</button>
+            </div>
+        </div>
+
+        <div class="campo">
+            <label for="input-note-ricevimento">Note / problematiche</label>
+            <textarea id="input-note-ricevimento" rows="3" placeholder="Facoltative se conforme, consigliate se non conforme"></textarea>
+        </div>
+
+        <div class="campo">
+            <label for="input-operatore">Operatore</label>
+            <input type="text" id="input-operatore" placeholder="Il tuo nome" autocomplete="name">
+        </div>
+
+        <button class="bottone-grande" id="btn-salva-ricevimento">Registra ricevimento</button>
+    </div>
+
+    <section class="blocco">
+        <h2>Ricevimenti di oggi</h2>
+        <div id="lista-ricevimenti" class="lista-camion">Caricamento…</div>
+    </section>
+</div>
+
+<!-- SCHERMO REGISTRO PULIZIE -->
+<div id="schermo-pulizie" class="schermo">
+    <header class="top">
+        <h1>🧹 Registro Pulizie</h1>
+        <div class="sottotitolo" id="sottotitolo-data-pulizie">—</div>
+    </header>
+    <button class="bottone-secondario" id="btn-torna-dashboard-pulizie">← Torna alla Dashboard</button>
+
+    <div class="blocco">
+        <h2>Nuova pulizia</h2>
+
+        <div class="campo">
+            <label for="input-area-pulizia">Area / camion / cella</label>
+            <select id="input-area-pulizia"></select>
+        </div>
+
+        <div class="campo">
+            <label for="input-frequenza">Frequenza</label>
+            <select id="input-frequenza"></select>
+        </div>
+
+        <div class="campo">
+            <label>Esito</label>
+            <div class="toggle-conformita">
+                <button type="button" class="btn-conformita conforme" id="btn-completato">✅ Completato</button>
+                <button type="button" class="btn-conformita non-conforme" id="btn-non-completato">⚠️ Non completato</button>
+            </div>
+        </div>
+
+        <div class="campo">
+            <label for="input-note-pulizia">Note</label>
+            <textarea id="input-note-pulizia" rows="3" placeholder="Facoltative"></textarea>
+        </div>
+
+        <div class="campo">
+            <label for="input-operatore-pulizia">Operatore</label>
+            <input type="text" id="input-operatore-pulizia" placeholder="Il tuo nome" autocomplete="name">
+        </div>
+
+        <button class="bottone-grande" id="btn-salva-pulizia">Registra pulizia</button>
+    </div>
+
+    <section class="blocco">
+        <h2>Pulizie di oggi</h2>
+        <div id="lista-pulizie" class="lista-camion">Caricamento…</div>
+    </section>
+</div>
+
+<!-- Foglio modale per inserire a posteriori la temperatura di un giorno mancante (camion) -->
+<div class="overlay" id="overlay-backfill-camion">
+    <div class="foglio-temp">
+        <h2 id="titolo-modale-backfill">Temperatura</h2>
+        <div class="ora-corrente" id="sottotitolo-modale-backfill">—</div>
+
+        <div class="selettore-temp">
+            <button id="btn-meno-backfill">−</button>
+            <div class="valore"><span id="valore-temp-backfill">-18</span><span class="unita">°C</span></div>
+            <button id="btn-piu-backfill">+</button>
+        </div>
+
+        <button class="conferma" id="btn-conferma-backfill">✅ Conferma e salva</button>
+        <button class="annulla" id="btn-annulla-backfill">Annulla</button>
+    </div>
+</div>
+
+<!-- Foglio modale per inserire a posteriori la temperatura di un giorno mancante (cella) -->
+<div class="overlay" id="overlay-backfill-cella">
+    <div class="foglio-temp">
+        <h2 id="titolo-modale-backfill-cella">Temperatura</h2>
+        <div class="ora-corrente" id="sottotitolo-modale-backfill-cella">—</div>
+
+        <div class="selettore-temp">
+            <button id="btn-meno-backfill-cella">−</button>
+            <div class="valore"><span id="valore-temp-backfill-cella">-20</span><span class="unita">°C</span></div>
+            <button id="btn-piu-backfill-cella">+</button>
+        </div>
+
+        <button class="conferma" id="btn-conferma-backfill-cella">✅ Conferma e salva</button>
+        <button class="annulla" id="btn-annulla-backfill-cella">Annulla</button>
+    </div>
+</div>
+
+<!-- Foglio modale per inserire la temperatura di una cella -->
+<div class="overlay" id="overlay-temp-cella">
+    <div class="foglio-temp">
+        <h2 id="titolo-modale-cella">Temperatura</h2>
+        <div class="ora-corrente" id="ora-modale-cella">—</div>
+
+        <div class="selettore-temp">
+            <button id="btn-meno-cella">−</button>
+            <div class="valore"><span id="valore-temp-cella">-20</span><span class="unita">°C</span></div>
+            <button id="btn-piu-cella">+</button>
+        </div>
+
+        <div class="campo" style="text-align:left;">
+            <label for="input-note-cella">Note (facoltative)</label>
+            <input type="text" id="input-note-cella" placeholder="Es. sbrinamento in corso">
+        </div>
+
+        <button class="conferma" id="btn-conferma-temp-cella">✅ Conferma e salva</button>
+        <button class="annulla" id="btn-annulla-temp-cella">Annulla</button>
+    </div>
+</div>
+
+<!-- Foglio modale per aggiungere/modificare un furgone (Anagrafica) -->
+<div class="overlay" id="overlay-furgone">
+    <div class="foglio-temp">
+        <h2 id="titolo-modale-furgone">Furgone</h2>
+
+        <div class="campo" style="text-align:left;">
+            <label for="input-targa-furgone">Targa</label>
+            <input type="text" id="input-targa-furgone" placeholder="Es. AB123CD" style="text-transform:uppercase;">
+        </div>
+        <div class="campo" style="text-align:left;">
+            <label for="input-modello-furgone">Modello</label>
+            <input type="text" id="input-modello-furgone" placeholder="Es. Iveco Daily 35C15">
+        </div>
+        <div class="campo" style="text-align:left;">
+            <label for="input-autista-furgone">Autista abituale (lascia vuoto se nessuno)</label>
+            <input type="text" id="input-autista-furgone" placeholder="Es. Mario Rossi" autocomplete="name">
+        </div>
+        <div class="campo campo-checkbox">
+            <label>
+                <input type="checkbox" id="input-attivo-furgone" checked>
+                Furgone attualmente in uso
+            </label>
+            <div class="nota-checkbox">Deseleziona se il furgone è fermo/fuori stagione: non comparirà più tra i "giorni mancanti" né tra quelli da controllare ogni giorno.</div>
+        </div>
+
+        <button class="conferma" id="btn-conferma-furgone">✅ Salva</button>
+        <button class="annulla" id="btn-elimina-furgone" style="display:none; color:#c0392b;">🗑️ Elimina furgone</button>
+        <button class="annulla" id="btn-annulla-furgone">Annulla</button>
+    </div>
+</div>
+
+<!-- Foglio modale per aggiungere/modificare una cella (Anagrafica) -->
+<div class="overlay" id="overlay-cella-anagrafica">
+    <div class="foglio-temp">
+        <h2 id="titolo-modale-cella-anagrafica">Cella</h2>
+
+        <div class="campo" style="text-align:left;">
+            <label for="input-id-cella-anagrafica">Codice (es. CEL03)</label>
+            <input type="text" id="input-id-cella-anagrafica" placeholder="Es. CEL03" style="text-transform:uppercase;">
+        </div>
+        <div class="campo" style="text-align:left;">
+            <label for="input-nome-cella-anagrafica">Nome</label>
+            <input type="text" id="input-nome-cella-anagrafica" placeholder="Es. Cella Grande">
+        </div>
+        <div class="campo" style="text-align:left;">
+            <label for="input-localizzazione-cella-anagrafica">Localizzazione</label>
+            <input type="text" id="input-localizzazione-cella-anagrafica" placeholder="Es. Magazzino - Lato Nord">
+        </div>
+        <div class="campo" style="text-align:left;">
+            <label for="input-temp-nominale-cella-anagrafica">Temperatura nominale (°C)</label>
+            <input type="number" id="input-temp-nominale-cella-anagrafica" placeholder="Es. -25" step="1">
+        </div>
+        <div class="campo campo-checkbox">
+            <label>
+                <input type="checkbox" id="input-attivo-cella-anagrafica" checked>
+                Cella attualmente in uso
+            </label>
+            <div class="nota-checkbox">Deseleziona se la cella è spenta/non usata (es. bassa stagione): non comparirà più tra quelle da registrare ogni giorno né tra i "giorni mancanti".</div>
+        </div>
+
+        <button class="conferma" id="btn-conferma-cella-anagrafica">✅ Salva</button>
+        <button class="annulla" id="btn-elimina-cella-anagrafica" style="display:none; color:#c0392b;">🗑️ Elimina cella</button>
+        <button class="annulla" id="btn-annulla-cella-anagrafica">Annulla</button>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="../dati-camion.js"></script>
+<script src="../dati-celle.js"></script>
+<script src="../dati-fornitori.js"></script>
+<script src="../dati-pulizie.js"></script>
+<script src="../dati-azienda.js"></script>
+<script src="../admin.js"></script>
+</body>
+</html>
