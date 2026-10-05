@@ -1365,3 +1365,13 @@ function sezioneTabellaPulizie(righe) {
         </div>
     `;
 }
+
+// ============================================================
+// SERVICE WORKER (necessario per poter installare la Dashboard Admin
+// come vera app sul telefono, e per farla aprire anche offline)
+// ============================================================
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("service-worker.js");
+    });
+}
