@@ -321,7 +321,7 @@ document.getElementById("btn-conferma-temp").addEventListener("click", () => {
 // riga qui sotto e ripubblica il sito: è un codice semplice,
 // pensato per evitare errori, non una vera protezione di sicurezza.
 // ============================================================
-const PIN_CAMBIO_IDENTITA = "2025";
+const PIN_CAMBIO_IDENTITA = "2211";
 
 function apriModalePin() {
     document.getElementById("input-pin-identita").value = "";
