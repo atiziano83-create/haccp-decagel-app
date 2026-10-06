@@ -2,6 +2,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // "Admin" = utente entrato con email e password (non anonimo).
+    // Gli autisti entrano in modo anonimo e non passano da qui.
+    function eAdmin() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == "password";
+    }
+
     match /temp_camion/{docId} {
       // Solo chi si è "presentato" all'app (anche solo in modo anonimo)
       // può leggere o scrivere. Blocca bot/estranei che non passano
@@ -71,28 +78,28 @@ service cloud.firestore {
     }
 
     match /anagrafica_camion/{docId} {
-      // Elenco furgoni/autisti gestito dall'admin dalla sezione
-      // "Anagrafica". L'id del documento deve essere la targa stessa.
+      // Elenco furgoni/autisti: lettura per tutti gli utenti dell'app,
+      // modifica solo per l'Admin (account con password). L'id del documento deve essere la targa stessa.
       allow read: if request.auth != null;
-      allow create, update: if request.auth != null
+      allow create, update: if eAdmin()
         && docId == request.resource.data.targa
         && request.resource.data.targa is string
         && request.resource.data.modello is string
         && request.resource.data.autista is string;
-      allow delete: if request.auth != null;
+      allow delete: if eAdmin();
     }
 
     match /anagrafica_celle/{docId} {
       // Elenco celle frigo gestito dall'admin. L'id del documento deve
       // essere il codice della cella stessa.
       allow read: if request.auth != null;
-      allow create, update: if request.auth != null
+      allow create, update: if eAdmin()
         && docId == request.resource.data.id
         && request.resource.data.id is string
         && request.resource.data.nome is string
         && request.resource.data.localizzazione is string
         && request.resource.data.temp_nominale is number;
-      allow delete: if request.auth != null;
+      allow delete: if eAdmin();
     }
 
     // Tutto il resto del database resta bloccato di default.
